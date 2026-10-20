@@ -5,12 +5,12 @@ GitHubで公開されたスキルを読み解き、概要・使い方・作成�
 ## 導入
 
 ```sh
-npx skills add yamazaki-yuki-23/skill-anatomy -g -a codex claude-code
+npx skills add yamazaki-yuki-23/skill-anatomy
 ```
 
 Node.js 22以上とGitが必要です。PR・Issueも調べる場合は、GitHub CLIを導入して `gh auth login` で認証してください。
 
-`-g` は全プロジェクト向けの登録です。プロジェクト内に入れる場合は省きます。片方だけに入れる場合は `-a codex` または `-a claude-code` を指定してください。導入後はエージェントを再起動します。[skills CLIの仕様](https://github.com/vercel-labs/skills#install-a-skill)
+導入先のエージェントと適用範囲は、実行時に選択してください。導入後はエージェントを再起動します。[skills CLIの仕様](https://github.com/vercel-labs/skills#install-a-skill)
 
 ## 使う
 
@@ -59,7 +59,7 @@ export SKILL_ANATOMY_WORKSPACE="$HOME/.local/share/skill-anatomy"
 ## 更新
 
 ```sh
-npx skills update skill-anatomy -g
+npx skills update skill-anatomy
 ```
 
 npxで導入した場合、分析結果はインストール先の外に保存するため、スキルを更新しても残ります。レポートと `.state.json` は一緒にGitで管理できます。自動でcommit・pushはしません。
