@@ -10,8 +10,6 @@ npx skills add yamazaki-yuki-23/skill-anatomy -g -a codex claude-code
 
 Node.js 22以上とGitが必要です。PR・Issueも調べる場合は、GitHub CLIを導入して `gh auth login` で認証してください。
 
-手動clone、Rust/Cargo、このスキル用の `npm install` は不要です。実行用JavaScriptを同梱しているため、利用時のビルドもありません。
-
 `-g` は全プロジェクト向けの登録です。プロジェクト内に入れる場合は省きます。片方だけに入れる場合は `-a codex` または `-a claude-code` を指定してください。導入後はエージェントを再起動します。[skills CLIの仕様](https://github.com/vercel-labs/skills#install-a-skill)
 
 ## 使う
@@ -48,13 +46,7 @@ reports/<所有者>/<リポジトリ名>/
 └── .state.json                 # 再開に使う記録
 ```
 
-| 導入方法 | 保存先の基準フォルダ |
-|---|---|
-| `npx skills add` | 分析を実行している作業フォルダ |
-| 手動clone | このツールのリポジトリ |
-| `SKILL_ANATOMY_WORKSPACE` を設定 | 指定したフォルダを優先 |
-
-専用フォルダに保存する場合は、エージェントを起動する前に設定します。
+上記の導入手順では、分析を実行している作業フォルダに保存します。保存先を変える場合は、エージェントを起動する前に設定します。
 
 ```sh
 export SKILL_ANATOMY_WORKSPACE="$HOME/.local/share/skill-anatomy"
@@ -74,7 +66,7 @@ npxで導入した場合、分析結果はインストール先の外に保存�
 
 ## 開発
 
-開発者はclone後に次を実行します。
+開発時は次を実行します。
 
 ```sh
 npm ci
@@ -84,9 +76,9 @@ npm test
 npm run check:dist
 ```
 
-TypeScriptは `src/`、配布用JavaScriptは `dist/` に置きます。ソースを変更したら、ビルドした `dist/` もコミットしてください。実行時に外部のnpmパッケージは使いません。
+TypeScriptは `src/`、配布用JavaScriptは `dist/` に置きます。ソースを変更したら、ビルドした `dist/` もコミットしてください。
 
-clone元をスキルとして登録する場合は `sh scripts/install.sh both` を実行します。この手動登録スクリプトはmacOS/Linux向けです。CLIの使い方は `node dist/cli.js --help`、分析手順は [SKILL.md](SKILL.md) を参照してください。
+CLIの使い方は `node dist/cli.js --help`、分析手順は [SKILL.md](SKILL.md) を参照してください。
 
 テストはURL判別・差分検出・再開・配布ファイルの動作を確認します。AIが書く分析文の質は対象外です。
 
