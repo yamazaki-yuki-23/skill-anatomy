@@ -1,0 +1,15 @@
+{
+  "provenance": "Completed using the former Rust release binary; preserved as a format-v2 regression fixture.",
+  "files": {
+    "skills/one/SKILL.md": "b8aad57f977a9415403e0a45eb71e51eb90a003b"
+  },
+  "history": "9014e1b8ce06364cfaae81fe552f39ff8bde0004\n",
+  "report_text": "# Rustで完了記録した分析\n",
+  "index": {
+    "status": "available",
+    "items": []
+  },
+  "source_signature": "66821e8dd8a33951fe0d00e62b07319fe43b5345b9d999f28e27e0a5156e0f8b",
+  "report_hash": "e2916550ca3602dd2c90f13a4acf7faaa39d57eeff35fbf2296a352934e5ae92",
+  "index_hash": "e1dbc00eb5b133c3420cfde33c69d2abb2bd39e0514fa8b26abc1ca4a74d6e8d"
+}

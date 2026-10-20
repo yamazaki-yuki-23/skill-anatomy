@@ -2,14 +2,4 @@
 set -eu
 
 anatomy_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
-anatomy_binary="$anatomy_root/target/release/skill-anatomy"
-
-if [ ! -x "$anatomy_binary" ]; then
-    cargo build --release --locked --manifest-path "$anatomy_root/Cargo.toml"
-fi
-
-if [ "${1-}" = prepare ]; then
-    shift
-    exec "$anatomy_binary" prepare --tool-root "$anatomy_root" "$@"
-fi
-exec "$anatomy_binary" "$@"
+exec node "$anatomy_root/dist/cli.js" "$@"
