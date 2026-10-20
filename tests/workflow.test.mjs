@@ -226,7 +226,7 @@ test('fingerprints keep Rust-compatible map key order and string encoding', () =
 });
 
 test('fingerprints match checkpoints produced by the former Rust binary', () => {
-  const fixture = readJson(fileURLToPath(new URL('./fixtures/rust-v2.json', import.meta.url)));
+  const fixture = readJson(fileURLToPath(new URL('./fixtures/checkpoint-format-v2.json', import.meta.url)));
   assert.equal(digest({ files: fixture.files, history: fixture.history }), fixture.source_signature);
   assert.equal(digest(fixture.report_text), fixture.report_hash);
   assert.equal(digest(fixture.index), fixture.index_hash);
