@@ -2,61 +2,88 @@
 
 English | [日本語](README.ja.md)
 
-Analyze skills published on GitHub and create Japanese Markdown reports covering their purpose, usage, history, design choices, and ideas for your own skills. Works with Codex and Claude Code.
+Learn how the agent skills you use are designed.
 
-## Install
+Give your agent a GitHub URL. It reads the instructions, references, and history, then writes a Japanese Markdown guide to the problem, the mechanism, the design decisions, and ideas for your own skills. Works with Codex and Claude Code.
 
-```sh
-npx skills add yamazaki-yuki-23/skill-anatomy
-```
+## Get started
 
-Requires Node.js 22 or later and Git. To research pull requests and issues, install the GitHub CLI and authenticate with `gh auth login`.
+Requires Node.js 22 or later and Git.
 
-Choose your agent and installation scope when prompted. Restart your agent after installation. See the [skills CLI documentation](https://github.com/vercel-labs/skills#install-a-skill).
+1. Install the skill. Choose your agent and installation scope when prompted.
 
-## Use
+   ```sh
+   npx skills add yamazaki-yuki-23/skill-anatomy
+   ```
 
-In Codex:
+2. Restart your agent and pass the GitHub URL you want to study.
+
+   Codex:
+
+   ```text
+   $skill-anatomy https://github.com/mattpocock/skills
+   ```
+
+   Claude Code:
+
+   ```text
+   /skill-anatomy https://github.com/mattpocock/skills
+   ```
+
+3. Check the proposed research plan and output location, then reply “OK”. The agent saves individual analyses as it works and finishes with a guide to the repository's shared design ideas.
+
+Repositories, individual skills, and folders containing multiple skills are detected automatically. You can also pass an [individual skill URL](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me) or a URL ending in `blob/REF/PATH/SKILL.md`.
+
+To include pull requests and issues, install the GitHub CLI and authenticate with `gh auth login`. If it is unavailable, analysis continues with files and commits, and missing information is noted.
+
+## What you learn
+
+Using a skill you like can raise questions: why do these instructions work this way, and how would you design something similar? Skill anatomy was built to explore those questions through source files and history.
+
+- What problem the author faced, and which changes addressed it.
+- How instruction order, approval points, and shared references shape the agent's decisions.
+- What conditions and instructions you would need to apply the same idea to a different problem.
+
+For an interview skill, for example, the guide can examine the instruction to include a recommended answer. It explains how users can start by accepting or adjusting that answer, then shows how to apply the idea in a requirements-gathering skill of your own.
+
+You can add a focus alongside the URL, such as “explain how the shared interview procedure is separated from its entry points”.
+
+Explanations cite their sources and distinguish the author's statements from the analyst's interpretation. Unknown motivations are identified. Research stays within the target repository's files, commits, pull requests, and issues. Target skills are not executed or scored.
+
+## Reports
+
+Reports are saved in the directory where you run the analysis.
 
 ```text
-$skill-anatomy https://github.com/mattpocock/skills
+reports/<owner>/<repository>/
+├── repository-analysis.md      # Overview, skill list, and shared design lessons
+├── skill-analyses/<path>.md     # Each skill's mechanism, history, design, and applications
+└── .state.json                 # Resume state
 ```
 
-In Claude Code, this example targets an individual skill:
+Each guide follows the structure that suits the skill. The repository guide links to individual analyses, so you can choose what to study.
 
-```text
-/skill-anatomy https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me
-```
-
-The skill automatically detects repositories, individual skills, and folders containing multiple skills. URLs ending in `blob/REF/PATH/SKILL.md` are also supported.
-
-It presents a research plan and output location, then waits for your approval before analyzing. You can also request a focus, such as how instructions are split across files.
+Run the same URL again to resume unfinished work and reanalyze items affected by changes. Changes to shared files or the pull request and issue index may trigger reanalysis of all skills.
 
 | Option | Behavior |
 |---|---|
 | `--no-confirm` | Skip research-plan confirmation for this run. Tool permission prompts still apply. |
 | `--refresh` | Reanalyze the entire selected scope. |
 
-Research is limited to files, commits, pull requests, and issues in the target repository, with sources cited. Reports mark unknown author motivations as “確認できず” and unavailable information as “未確認”. The skill does not execute the target skills or assess their weaknesses.
+<details>
+<summary>Output location and reruns</summary>
 
-## Output
-
-```text
-reports/<owner>/<repository>/
-├── repository-analysis.md      # Overview, skill list, and shared design choices
-├── skill-analyses/<path>.md     # Individual skill analysis and application examples
-└── .state.json                 # Resume state
-```
-
-With the installation above, reports are saved in your working directory. To choose another location, set this variable before starting your agent:
+To choose another location, set this variable before starting your agent:
 
 ```sh
 export SKILL_ANATOMY_WORKSPACE="$HOME/.local/share/skill-anatomy"
 ```
 
-Run the same URL again to resume unfinished work and reanalyze items affected by changes. Skills with the same name are distinguished by their original paths. Reports for deleted skills are retained. Do not analyze the same repository concurrently.
+Skills with the same name are distinguished by their original paths. Reports for deleted skills are retained. You can track reports and `.state.json` together in Git. Do not analyze the same repository concurrently.
 
-Changes to shared files or the pull request and issue index trigger reanalysis of all skills. Changes missing from the index may go undetected; use `--refresh` when needed. If the GitHub CLI is unavailable, analysis continues with files and commits, and pull requests and issues are marked as unverified.
+Some updates, such as changes limited to PR reviews, may go undetected. Use `--refresh` when you want to research them again.
+
+</details>
 
 ## Update
 
@@ -64,6 +91,6 @@ Changes to shared files or the pull request and issue index trigger reanalysis o
 npx skills update skill-anatomy
 ```
 
-With an npx installation, reports are stored outside the installed skill and survive updates. You can track reports and `.state.json` together in Git. The skill does not commit or push automatically.
+With the installation above, reports are stored outside the installed skill and survive updates.
 
-MIT License. Code and text in analyzed repositories belong to their respective authors.
+[MIT License](LICENSE)
