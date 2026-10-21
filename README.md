@@ -1,85 +1,69 @@
 # Skill anatomy
 
-GitHubで公開されたスキルを読み解き、概要・使い方・作成経緯・設計の工夫・自作スキルへの応用例を日本語Markdownにまとめます。CodexとClaude Codeで使えます。
+English | [日本語](README.ja.md)
 
-## 導入
+Analyze skills published on GitHub and create Japanese Markdown reports covering their purpose, usage, history, design choices, and ideas for your own skills. Works with Codex and Claude Code.
+
+## Install
 
 ```sh
 npx skills add yamazaki-yuki-23/skill-anatomy
 ```
 
-Node.js 22以上とGitが必要です。PR・Issueも調べる場合は、GitHub CLIを導入して `gh auth login` で認証してください。
+Requires Node.js 22 or later and Git. To research pull requests and issues, install the GitHub CLI and authenticate with `gh auth login`.
 
-導入先のエージェントと適用範囲は、実行時に選択してください。導入後はエージェントを再起動します。[skills CLIの仕様](https://github.com/vercel-labs/skills#install-a-skill)
+Choose your agent and installation scope when prompted. Restart your agent after installation. See the [skills CLI documentation](https://github.com/vercel-labs/skills#install-a-skill).
 
-## 使う
+## Use
 
-Codexでは次のように呼び出します。
+In Codex:
 
 ```text
 $skill-anatomy https://github.com/mattpocock/skills
 ```
 
-Claude Codeでは個別スキルのURLも指定できます。
+In Claude Code, this example targets an individual skill:
 
 ```text
 /skill-anatomy https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me
 ```
 
-リポジトリ全体・個別スキル・複数スキルを含むフォルダを自動判別します。`blob/REF/PATH/SKILL.md` のURLにも対応します。
+The skill automatically detects repositories, individual skills, and folders containing multiple skills. URLs ending in `blob/REF/PATH/SKILL.md` are also supported.
 
-分析方針と保存先を提示し、OKを受けてから分析を始めます。「指示の分割方法を詳しく」など、重点的に知りたいことも添えられます。
+It presents a research plan and output location, then waits for your approval before analyzing. You can also request a focus, such as how instructions are split across files.
 
-| オプション | 動作 |
+| Option | Behavior |
 |---|---|
-| `--no-confirm` | 今回だけ分析方針の確認を省く。ツールの権限確認は省かない |
-| `--refresh` | 指定範囲をすべて再分析する |
+| `--no-confirm` | Skip research-plan confirmation for this run. Tool permission prompts still apply. |
+| `--refresh` | Reanalyze the entire selected scope. |
 
-調査は対象リポジトリのファイル・コミット・PR・Issueに限定し、出典を付けます。作成の動機が分からなければ「確認できず」、取得できなければ「未確認」と記載します。対象スキルの実行検証や弱点評価は含めません。
+Research is limited to files, commits, pull requests, and issues in the target repository, with sources cited. Reports mark unknown author motivations as “確認できず” and unavailable information as “未確認”. The skill does not execute the target skills or assess their weaknesses.
 
-## 出力
+## Output
 
 ```text
-reports/<所有者>/<リポジトリ名>/
-├── repository-analysis.md      # 全体概要、スキル一覧、共通する設計の工夫
-├── skill-analyses/<パス>.md    # 各スキルの詳細と応用例
-└── .state.json                 # 再開に使う記録
+reports/<owner>/<repository>/
+├── repository-analysis.md      # Overview, skill list, and shared design choices
+├── skill-analyses/<path>.md     # Individual skill analysis and application examples
+└── .state.json                 # Resume state
 ```
 
-上記の導入手順では、分析を実行している作業フォルダに保存します。保存先を変える場合は、エージェントを起動する前に設定します。
+With the installation above, reports are saved in your working directory. To choose another location, set this variable before starting your agent:
 
 ```sh
 export SKILL_ANATOMY_WORKSPACE="$HOME/.local/share/skill-anatomy"
 ```
 
-同じURLで再実行すると、未完了分と変更の影響がある分だけ分析します。同名スキルは元のパスで区別し、削除されたスキルの過去レポートは残します。同じリポジトリの分析を並行して実行しないでください。
+Run the same URL again to resume unfinished work and reanalyze items affected by changes. Skills with the same name are distinguished by their original paths. Reports for deleted skills are retained. Do not analyze the same repository concurrently.
 
-共有資料やPR・Issueの索引が変わった場合は、保守的に全件を再調査します。索引に反映されない変更などは自動検知できないため、必要に応じて `--refresh` を使ってください。GitHub CLIが使えない場合はファイルとコミットで分析を続け、PR・Issueは未確認とします。
+Changes to shared files or the pull request and issue index trigger reanalysis of all skills. Changes missing from the index may go undetected; use `--refresh` when needed. If the GitHub CLI is unavailable, analysis continues with files and commits, and pull requests and issues are marked as unverified.
 
-## 更新
+## Update
 
 ```sh
 npx skills update skill-anatomy
 ```
 
-npxで導入した場合、分析結果はインストール先の外に保存するため、スキルを更新しても残ります。レポートと `.state.json` は一緒にGitで管理できます。自動でcommit・pushはしません。
+With an npx installation, reports are stored outside the installed skill and survive updates. You can track reports and `.state.json` together in Git. The skill does not commit or push automatically.
 
-## 開発
-
-開発時は次を実行します。
-
-```sh
-npm ci
-npm run build
-npm run check
-npm test
-npm run check:dist
-```
-
-TypeScriptは `src/`、配布用JavaScriptは `dist/` に置きます。ソースを変更したら、ビルドした `dist/` もコミットしてください。
-
-CLIの使い方は `node dist/cli.js --help`、分析手順は [SKILL.md](SKILL.md) を参照してください。
-
-テストはURL判別・差分検出・再開・配布ファイルの動作を確認します。AIが書く分析文の質は対象外です。
-
-MIT License。対象リポジトリのコードや文章の権利は、それぞれの作者に帰属します。
+MIT License. Code and text in analyzed repositories belong to their respective authors.
