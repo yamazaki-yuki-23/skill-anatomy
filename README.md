@@ -6,6 +6,10 @@ Learn how the agent skills you use are designed.
 
 Give your agent a GitHub URL. It reads the instructions, references, and history, then writes a Japanese Markdown guide to the problem, the mechanism, the design decisions, and ideas for your own skills. Works with Codex and Claude Code.
 
+[![Japanese analysis of grill-me, explaining how to align a question with its recommendation and apply the idea to your own skill](assets/grill-me-analysis.png)](examples/grill-me.md)
+
+Example: [a guide to grill-me, in Japanese](examples/grill-me.md). An independent analysis of [Matt Pocock's skill](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me). The questions in the image are hypothetical examples.
+
 ## Get started
 
 Requires Node.js 22 or later and Git.
@@ -43,8 +47,6 @@ Using a skill you like can raise questions: why do these instructions work this 
 - What problem the author faced, and which changes addressed it.
 - How instruction order, approval points, and shared references shape the agent's decisions.
 - What conditions and instructions you would need to apply the same idea to a different problem.
-
-For an interview skill, for example, the guide can examine the instruction to include a recommended answer. It explains how users can start by accepting or adjusting that answer, then shows how to apply the idea in a requirements-gathering skill of your own.
 
 You can add a focus alongside the URL, such as “explain how the shared interview procedure is separated from its entry points”.
 

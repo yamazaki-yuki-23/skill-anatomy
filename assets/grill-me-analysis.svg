@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+<title id="title">grill-meの分析例：推奨回答と質問の向きをそろえる</title>
+<desc id="desc">質問と推奨案が逆向きだと「はい」が何への同意か曖昧になる。問いを推奨案とそろえる設計を、問い合わせ通知の仮想例で解説する。Matt Pocock氏のスキルを題材にしたSkill anatomy独自の分析。</desc>
+<defs><filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#173b2e" flood-opacity=".07"/></filter></defs>
+<rect width="1200" height="760" fill="#edf1ec"/>
+<rect x="26" y="24" width="1148" height="712" rx="18" fill="#fffefb" stroke="#d9e1d8" filter="url(#shadow)"/>
+<g font-family="-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif">
+<text x="64" y="76" font-size="17" font-weight="700" fill="#286c54">SKILL ANATOMY</text>
+<text x="1136" text-anchor="end" y="76" font-size="17" font-weight="400" fill="#6b7a6e">分析例 / grill-me</text>
+<text x="64" y="140" font-size="38" font-weight="700" fill="#193e30">推奨回答と、質問の向きをそろえる</text>
+<text x="64" y="180" font-size="22" font-weight="400" fill="#617066">原文の指示を、利用者の判断と自作への応用まで読み解く。</text>
+<rect x="64" y="210" width="1072" height="76" rx="9" fill="#edf5ee"/>
+<text x="84" y="239" font-size="14" font-weight="600" fill="#49725b">元の指示</text>
+<text x="84" y="267" font-size="20" font-weight="500" fill="#204f3b">Word each question so "yes" accepts your recommended answer.</text>
+<rect x="64" y="316" width="340" height="294" rx="12" fill="#f6f6f1" stroke="#e2e6dc"/>
+<text x="88" y="353" font-size="17" font-weight="600" fill="#426b50">01  問いの例</text>
+<text x="88" y="404" font-size="26" font-weight="600" fill="#183e2d">通知を1件ずつ</text>
+<text x="88" y="445" font-size="26" font-weight="600" fill="#183e2d">送りますか？</text>
+<text x="88" y="510" font-size="18" font-weight="400" fill="#536457">推奨：1日分をまとめる。</text>
+<rect x="430" y="316" width="340" height="294" rx="12" fill="#f6f6f1" stroke="#e2e6dc"/>
+<text x="454" y="353" font-size="17" font-weight="600" fill="#426b50">02  設計の読み解き</text>
+<text x="454" y="404" font-size="26" font-weight="600" fill="#183e2d">「はい」が何への</text>
+<text x="454" y="445" font-size="26" font-weight="600" fill="#183e2d">同意か曖昧になる。</text>
+<text x="454" y="510" font-size="18" font-weight="400" fill="#536457">問いと推奨案の向きをそろえ、</text>
+<text x="454" y="542" font-size="18" font-weight="400" fill="#536457">短い返事の意味を明確にする。</text>
+<rect x="796" y="316" width="340" height="294" rx="12" fill="#e5f0e6" stroke="#b8d0bc"/>
+<text x="820" y="353" font-size="17" font-weight="600" fill="#426b50">03  自作への応用</text>
+<text x="820" y="404" font-size="26" font-weight="600" fill="#183e2d">1日分をまとめて</text>
+<text x="820" y="445" font-size="26" font-weight="600" fill="#183e2d">送りますか？</text>
+<text x="820" y="510" font-size="18" font-weight="400" fill="#536457">推奨案と理由を示し、</text>
+<text x="820" y="542" font-size="18" font-weight="400" fill="#536457">回答を受けて次の問いへ。</text>
+<line x1="64" y1="647" x2="1136" y2="647" stroke="#dfe5da"/>
+<text x="64" y="680" font-size="16" font-weight="400" fill="#667568">題材：Matt Pocock / grill-me・grilling（MIT）</text>
+<text x="64" y="708" font-size="15" font-weight="400" fill="#768277">独自の分析・仮想の利用例です。作者の公式解説ではありません。</text>
+<text x="1136" text-anchor="end" y="680" font-size="15" font-weight="400" fill="#667568">SOURCE  5beb35b</text>
+</g></svg>

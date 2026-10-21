@@ -6,6 +6,10 @@
 
 GitHubのURLを渡すと、指示・参照資料・変更履歴を読み解き、作者が向き合った課題、仕組み、設計判断、自作スキルへの応用を日本語Markdownにまとめます。CodexとClaude Codeで使えます。
 
+[![grill-meの分析例。推奨回答と質問の向きをそろえる設計を読み解き、自作への応用を示す](assets/grill-me-analysis.png)](examples/grill-me.md)
+
+分析例：[grill-meを読み解く](examples/grill-me.md)。Matt Pocock氏の[元スキル](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me)を題材にした独自の分析です。図中の質問は仮想例です。
+
 ## はじめる
 
 Node.js 22以上とGitが必要です。
@@ -43,8 +47,6 @@ PR・Issueまで調べる場合は、GitHub CLIを導入して `gh auth login` �
 - 作者がどんな課題に向き合い、どの変更で対処したか。
 - 指示の順序、確認のタイミング、参照先への分担が、エージェントの判断をどう変えるか。
 - その考え方を自分の別の課題に使うなら、どんな条件と指示が必要か。
-
-質問系のスキルなら、たとえば「推奨回答を添える」指示を取り上げます。利用者が回答案の採用・修正から考え始められる構成を説明し、自作の要件整理スキルへ取り入れる場合の指示例まで示します。
 
 「共通手順への分割を詳しく」など、知りたい観点もURLに添えられます。
 
