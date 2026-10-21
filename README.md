@@ -63,7 +63,7 @@ reports/<owner>/<repository>/
 └── .state.json                 # Resume state
 ```
 
-Each guide follows the structure that suits the skill. The repository guide links to individual analyses, so you can choose what to study.
+Repository guides and individual analyses each use a consistent set of headings in a fixed order. The repository guide links to individual analyses, so you can choose what to study and compare.
 
 Run the same URL again to resume unfinished work and reanalyze items affected by changes. Changes to shared files or the pull request and issue index may trigger reanalysis of all skills.
 
