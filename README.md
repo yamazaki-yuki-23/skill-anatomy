@@ -2,19 +2,19 @@
 
 English | [日本語](README.ja.md)
 
-![Skill anatomy. An exploded book with connected layers illustrates studying the instructions, references, and history behind an agent skill.](assets/skill-anatomy-cover.png)
+![Skill anatomy. An exploded book with connected layers illustrates studying the instructions, references, and history behind an agent skill.](assets/skill-anatomy-cover.en.webp)
 
-Learn how the agent skills you use are designed.
+Understand how your favorite agent skills work, and apply what you learn to your own.
 
-Give your agent a GitHub URL. It reads the instructions, references, and history, then writes a Japanese Markdown guide to the problem, the mechanism, the design decisions, and ideas for your own skills. Works with Codex and Claude Code.
+Give your agent a GitHub URL. It studies the instructions, references, and history, then writes a Japanese Markdown report on the author's problem, design decisions, and ideas for your own skills. Works with Codex and Claude Code.
 
-Read the [grill-me analysis example, in Japanese](examples/grill-me.md), to see the full explanation.
+See the [analysis of Skill anatomy itself, in Japanese](examples/skill-anatomy.md), for an example report.
 
 ## Get started
 
 Requires Node.js 22 or later and Git.
 
-1. Install the skill. Choose your agent and installation scope when prompted.
+1. Install the skill. Choose your agent and installation location when prompted.
 
    ```sh
    npx skills add yamazaki-yuki-23/skill-anatomy
@@ -34,46 +34,50 @@ Requires Node.js 22 or later and Git.
    /skill-anatomy https://github.com/mattpocock/skills
    ```
 
-3. Check the proposed research plan and output location, then reply “OK”. The agent saves individual analyses as it works and finishes with a guide to the repository's shared design ideas.
+3. Check the proposed research scope and output location, then reply "OK". The agent saves a report for each skill as it works, followed by a report on the repository as a whole.
 
-Repositories, individual skills, and folders containing multiple skills are detected automatically. You can also pass an [individual skill URL](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me) or a URL ending in `blob/REF/PATH/SKILL.md`.
+The URL determines the research scope: a whole repository, [one skill](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me), a folder containing several skills, or a `SKILL.md` file.
 
-To include pull requests and issues, install the GitHub CLI and authenticate with `gh auth login`. If it is unavailable, analysis continues with files and commits, and missing information is noted.
+To include pull requests and issues, install the GitHub CLI and authenticate with `gh auth login`. If it is unavailable, research continues with files and commits, and missing information is noted in the report.
 
-## What you learn
-
-Using a skill you like can raise questions: why do these instructions work this way, and how would you design something similar? Skill anatomy was built to explore those questions through source files and history.
+## What the reports explain
 
 - What problem the author faced, and which changes addressed it.
-- How instruction order, approval points, and shared references shape the agent's decisions.
-- What conditions and instructions you would need to apply the same idea to a different problem.
+- How instruction order, approval points, and the division of responsibilities across references shape the agent's decisions.
+- What conditions and instructions you would need to apply a design idea to a different problem.
 
-You can add a focus alongside the URL, such as “explain how the shared interview procedure is separated from its entry points”.
+Skill anatomy was built to explore why a skill's instructions work the way they do, and how you might design your own. You can add a question alongside the URL, such as "explain how responsibilities are split between SKILL.md and its references".
 
 Explanations cite their sources and distinguish the author's statements from the analyst's interpretation. Unknown motivations are identified. Research stays within the target repository's files, commits, pull requests, and issues. Target skills are not executed or scored.
 
-## Reports
+## Saved files
 
-Reports are saved in the directory where you run the analysis.
+Reports are saved under `reports/` in the directory where you run the analysis.
 
 ```text
 reports/<owner>/<repository>/
-├── repository-analysis.md      # Overview, skill list, and shared design lessons
-├── skill-analyses/<path>.md     # Each skill's mechanism, history, design, and applications
-└── .state.json                 # Resume state
+├── repository-analysis.md      # Report on the repository as a whole
+├── skill-analyses/<path>.md     # Report on each skill
+└── .state.json                 # Record used to resume research
 ```
 
-Repository guides and individual analyses each use a consistent set of headings in a fixed order. The repository guide links to individual analyses, so you can choose what to study and compare.
+The repository report covers the skill list and shared design ideas. Each skill's report explains its mechanism, history, and applications. Links in the repository report lead to those reports. If you select one skill, the repository report covers only the researched scope.
 
-Run the same URL again to resume unfinished work and reanalyze items affected by changes. Changes to shared files or the pull request and issue index may trigger reanalysis of all skills.
+Each report type uses consistent headings in a fixed order, so you can find usage, history, design, and applications in the same place when comparing skills.
+
+## Resume or repeat research
+
+Pass the same URL again to research unfinished skills and those affected by changes. Changes to shared references or the pull request and issue list may trigger research of all skills.
+
+Add these options after the URL:
 
 | Option | Behavior |
 |---|---|
 | `--no-confirm` | Skip research-plan confirmation for this run. Tool permission prompts still apply. |
-| `--refresh` | Reanalyze the entire selected scope. |
+| `--refresh` | Research the entire selected scope again. |
 
 <details>
-<summary>Output location and reruns</summary>
+<summary>Change the output location and understand reruns</summary>
 
 To choose another location, set this variable before starting your agent:
 
@@ -81,7 +85,7 @@ To choose another location, set this variable before starting your agent:
 export SKILL_ANATOMY_WORKSPACE="$HOME/.local/share/skill-anatomy"
 ```
 
-Skills with the same name are distinguished by their original paths. Reports for deleted skills are retained. You can track reports and `.state.json` together in Git. Do not analyze the same repository concurrently.
+Skills with the same name are distinguished by their original paths. Reports for deleted skills are retained. You can track reports and `.state.json` together in Git. Do not research the same repository concurrently in the same output location.
 
 Some updates, such as changes limited to PR reviews, may go undetected. Use `--refresh` when you want to research them again.
 
@@ -93,6 +97,6 @@ Some updates, such as changes limited to PR reviews, may go undetected. Use `--r
 npx skills update skill-anatomy
 ```
 
-With the installation above, reports are stored outside the installed skill and survive updates.
+With the installation above, reports are stored separately from the installed skill and survive updates.
 
 [MIT License](LICENSE)
