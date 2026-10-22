@@ -2,13 +2,13 @@
 
 [English](README.md) | 日本語
 
+![Skill anatomy。指示・参照資料・変更履歴を読み解くことを、層に分かれた本と各層をつなぐ糸で表したイラスト](assets/skill-anatomy-cover.png)
+
 使っているスキルの成り立ちと設計を学ぶための、AIエージェント向けスキルです。
 
 GitHubのURLを渡すと、指示・参照資料・変更履歴を読み解き、作者が向き合った課題、仕組み、設計判断、自作スキルへの応用を日本語Markdownにまとめます。CodexとClaude Codeで使えます。
 
-[![grill-meの分析例。推奨回答と質問の向きをそろえる設計を読み解き、自作への応用を示す](assets/grill-me-analysis.png)](examples/grill-me.md)
-
-分析例：[grill-meを読み解く](examples/grill-me.md)。Matt Pocock氏の[元スキル](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me)を題材にした独自の分析です。図中の質問は仮想例です。
+実際の解説は、[grill-meの分析例](examples/grill-me.md)で読めます。
 
 ## はじめる
 

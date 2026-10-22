@@ -57,6 +57,8 @@
 
 ### 「yes」の意味もそろえる
 
+![質問と推奨回答の向きをそろえる設計の図解。図中の質問は本分析で作成した仮想例](../assets/grill-me-analysis.png)
+
 推奨案を付けるだけでは、短い返事が何への同意か分かりにくい場合があります。[PR #1193][pr1193]は、質問と推奨が逆向きになる例を挙げ、次の指示を追加しました。
 
 > Word each question so "yes" accepts your recommended answer.

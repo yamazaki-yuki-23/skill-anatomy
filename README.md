@@ -2,13 +2,13 @@
 
 English | [日本語](README.ja.md)
 
+![Skill anatomy. An exploded book with connected layers illustrates studying the instructions, references, and history behind an agent skill.](assets/skill-anatomy-cover.png)
+
 Learn how the agent skills you use are designed.
 
 Give your agent a GitHub URL. It reads the instructions, references, and history, then writes a Japanese Markdown guide to the problem, the mechanism, the design decisions, and ideas for your own skills. Works with Codex and Claude Code.
 
-[![Japanese analysis of grill-me, explaining how to align a question with its recommendation and apply the idea to your own skill](assets/grill-me-analysis.png)](examples/grill-me.md)
-
-Example: [a guide to grill-me, in Japanese](examples/grill-me.md). An independent analysis of [Matt Pocock's skill](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me). The questions in the image are hypothetical examples.
+Read the [grill-me analysis example, in Japanese](examples/grill-me.md), to see the full explanation.
 
 ## Get started
 
