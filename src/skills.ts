@@ -35,7 +35,10 @@ function encodeComponent(segment: string): string {
     )
     .join('');
 }
-export function reportPaths(skills: string[]): Record<string, string> {
+export function reportPaths(
+  skills: string[],
+  previous: Record<string, string> = {},
+): Record<string, string> {
   const mapping: Record<string, string> = Object.create(null) as Record<string, string>;
   for (const skill of skills) {
     let parent = folder(skill);
@@ -56,6 +59,26 @@ export function reportPaths(skills: string[]): Record<string, string> {
   for (const [skill, report] of Object.entries(mapping)) {
     if (counts.get(report.toLowerCase())! > 1)
       mapping[skill] = `${report.slice(0, -3)}--${digest(skill).slice(0, 12)}.md`;
+  }
+  const occupied = new Map(Object.entries(previous).filter(([, report]) => report));
+  for (const skill of skills) {
+    let candidate = previous[skill] || mapping[skill]!;
+    let attempt = 0;
+    const conflicts = (report: string): boolean => {
+      const key = report.toLowerCase();
+      return [...occupied].some(([owner, existing]) => {
+        const other = existing.toLowerCase();
+        return (
+          owner !== skill &&
+          (key === other || key.startsWith(`${other}/`) || other.startsWith(`${key}/`))
+        );
+      });
+    };
+    while (conflicts(candidate)) {
+      candidate = `skill-analyses/${digest(skill)}-${attempt++}/${mapping[skill]!.slice('skill-analyses/'.length)}`;
+    }
+    mapping[skill] = candidate;
+    occupied.set(skill, candidate);
   }
   return mapping;
 }

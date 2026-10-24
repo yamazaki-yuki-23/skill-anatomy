@@ -48,7 +48,10 @@ export function prepareSnapshot(
       };
   if (state.version !== VERSION) throw new Error('状態ファイルのバージョンが異なります');
   const indexHash = digest({ status: index.status, items: index.items });
-  const mappings = reportPaths(allSkills);
+  const mappings = reportPaths(
+    allSkills,
+    Object.fromEntries(Object.entries(state.skills).map(([skill, entry]) => [skill, entry.report])),
+  );
   const entries: Entry[] = [];
   const signSource = createSourceSigner(cache, commit, files, allSkills);
   const selectedSkills = new Set(selected);

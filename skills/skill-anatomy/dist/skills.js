@@ -25,7 +25,7 @@ function folder(skill) {
 function encodeComponent(segment) {
   return [...Buffer.from(segment)].map((byte) => /[a-z0-9_.-]/i.test(String.fromCharCode(byte)) ? String.fromCharCode(byte) : `%${byte.toString(16).toUpperCase().padStart(2, "0")}`).join("");
 }
-export function reportPaths(skills) {
+export function reportPaths(skills, previous = {}) {
   const mapping = Object.create(null);
   for (const skill of skills) {
     let parent = folder(skill);
@@ -46,6 +46,23 @@ export function reportPaths(skills) {
   for (const [skill, report] of Object.entries(mapping)) {
     if (counts.get(report.toLowerCase()) > 1)
       mapping[skill] = `${report.slice(0, -3)}--${digest(skill).slice(0, 12)}.md`;
+  }
+  const occupied = new Map(Object.entries(previous).filter(([, report]) => report));
+  for (const skill of skills) {
+    let candidate = previous[skill] || mapping[skill];
+    let attempt = 0;
+    const conflicts = (report) => {
+      const key = report.toLowerCase();
+      return [...occupied].some(([owner, existing]) => {
+        const other = existing.toLowerCase();
+        return owner !== skill && (key === other || key.startsWith(`${other}/`) || other.startsWith(`${key}/`));
+      });
+    };
+    while (conflicts(candidate)) {
+      candidate = `skill-analyses/${digest(skill)}-${attempt++}/${mapping[skill].slice("skill-analyses/".length)}`;
+    }
+    mapping[skill] = candidate;
+    occupied.set(skill, candidate);
   }
   return mapping;
 }

@@ -263,6 +263,30 @@ test('removed skills retain existing reports', () => {
   assert.ok(existsSync(report));
 });
 
+test('replacement skills cannot overwrite removed skill reports', () => {
+  const f = new Fixture();
+  const old = f.finishAll();
+  const report = old.plan.skills.find((e) => e.skill === 'skills/review/SKILL.md').report;
+  const contents = readFileSync(report, 'utf8');
+  unlinkSync(path.join(f.source, 'skills/review/SKILL.md'));
+  f.write('.agents/skills/review/SKILL.md', '# Replacement\n');
+  f.commit('Replace review namespace');
+  const current = f.prepare('', true);
+  f.finish(current, '.agents/skills/review/SKILL.md');
+  const replacement = current.plan.skills.find((e) => e.skill === '.agents/skills/review/SKILL.md');
+  assert.notEqual(replacement.report.toLowerCase(), report.toLowerCase());
+  assert.equal(readFileSync(report, 'utf8'), contents);
+  assert.deepEqual(f.prepare().result.pending, []);
+});
+
+test('report files cannot collide with parent directories', () => {
+  const f = new Fixture();
+  f.write('skills/foo/SKILL.md', '# Foo\n');
+  f.write('skills/foo.md/bar/SKILL.md', '# Bar\n');
+  f.commit('Add report and directory collision');
+  assert.equal(f.finishAll().plan.skills.length, 5);
+});
+
 test('missing reports are not skipped', () => {
   const f = new Fixture();
   const old = f.finishAll();
