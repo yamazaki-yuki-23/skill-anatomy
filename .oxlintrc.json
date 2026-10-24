@@ -25,5 +25,26 @@
       }
     ]
   },
-  "jsPlugins": ["./scripts/style-rules.mjs"]
+  "jsPlugins": ["./scripts/style-rules.mjs"],
+  "overrides": [
+    {
+      "files": ["src/**/*.ts"],
+      "rules": {
+        "import/no-cycle": "error",
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "Bun",
+            "message": "Published runtime must work with Node.js alone."
+          }
+        ],
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": ["bun", "vitest", "typescript", "yaml", "../scripts/*", "../tests/*"]
+          }
+        ]
+      }
+    }
+  ]
 }

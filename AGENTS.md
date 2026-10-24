@@ -1,5 +1,11 @@
 # Repository Guidelines
 
+## 保守の入口
+
+コード、スキル、配布構成、テストを変更したら`bun run verify`を実行してください。検査に失敗した状態で完了としないでください。ログは`.cache/harness/verify-*/`に保存されます。
+
+作業の進め方、Codexレビュー、定期検証、リリースは[保守手順](docs/maintenance.md)にまとめています。スキルの判断手順や出力基準を変えた場合は、実モデルでの評価とレポートの確認も行ってください。機械検査の成功を、説明の正しさや読みやすさの保証にしないでください。
+
 ## プロジェクト構成
 
 Skill anatomyは、スキルの仕組みを知り、自作に活かすためのAIエージェント向けスキルです。GitHub上のスキルのURLを渡すと、仕組みや設計の工夫、自作への応用を日本語のレポートにまとめます。
@@ -17,6 +23,7 @@ Skill anatomyは、スキルの仕組みを知り、自作に活かすためのA
 | `skills/skill-anatomy/references/`、`skills/skill-anatomy/assets/templates/` | 補足資料、レポートのテンプレート |
 | `skills/skill-anatomy/agents/openai.yaml`、`examples/` | エージェントのメタデータ、レポート例 |
 | `tests/` | テストとチェックポイントのテストデータ |
+| `scripts/harness/` | 構成検査、検証記録、Codexレビュー、リリース準備 |
 
 利用者向けの動作説明を変えるときは、`README.md` と `README.ja.md` の内容を揃えてください。
 
