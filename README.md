@@ -6,7 +6,7 @@ English | [日本語](README.ja.md)
 
 Understand how your favorite agent skills work, and apply what you learn to your own.
 
-Give your agent a GitHub URL. It studies the instructions, references, and history, then writes a Japanese Markdown report on the author's problem, design decisions, and ideas for your own skills. Works with Codex and Claude Code.
+Pass the URL of a skill on GitHub to get a Japanese report on how it works, its design decisions, and ideas for your own skills.
 
 See the [analysis of Skill anatomy itself, in Japanese](examples/skill-anatomy.md), for an example report.
 
