@@ -17,13 +17,21 @@ Requires Node.js 22 or later and Git.
 1. Install the skill with either command. Choose your agent and installation location when prompted.
 
    ```sh
+   # Install
    npx skills add yamazaki-yuki-23/skill-anatomy
+
+   # Update
+   npx skills update skill-anatomy
    ```
 
    Or use the GitHub CLI:
 
    ```sh
+   # Install
    gh skill install yamazaki-yuki-23/skill-anatomy skill-anatomy --pin master
+
+   # Update
+   gh skill install yamazaki-yuki-23/skill-anatomy skill-anatomy --pin master --force
    ```
 
 2. Restart your agent and pass the GitHub URL you want to study.
@@ -58,7 +66,7 @@ Explanations cite their sources and distinguish the author's statements from the
 
 ## Saved files
 
-Reports are saved under `reports/` in the directory where you run the analysis.
+Reports are saved under `reports/` in the directory where you run the analysis. They are stored separately from the installed skill and survive updates.
 
 ```text
 reports/<owner>/<repository>/
@@ -96,13 +104,5 @@ Skills with the same name are distinguished by their original paths. Reports for
 Some updates, such as changes limited to PR reviews, may go undetected. Use `--refresh` when you want to research them again.
 
 </details>
-
-## Update
-
-```sh
-npx skills update skill-anatomy
-```
-
-With the installation above, reports are stored separately from the installed skill and survive updates.
 
 [MIT License](LICENSE)

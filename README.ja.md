@@ -17,13 +17,21 @@ Node.js 22以上とGitが必要です。
 1. 次のどちらかでスキルをインストールします。使うエージェントとインストール先は、実行時に選べます。
 
    ```sh
+   # インストール
    npx skills add yamazaki-yuki-23/skill-anatomy
+
+   # 更新
+   npx skills update skill-anatomy
    ```
 
    GitHub CLIを使う場合
 
    ```sh
+   # インストール
    gh skill install yamazaki-yuki-23/skill-anatomy skill-anatomy --pin master
+
+   # 更新
+   gh skill install yamazaki-yuki-23/skill-anatomy skill-anatomy --pin master --force
    ```
 
 2. エージェントを再起動し、調べたいGitHubのURLを渡します。
@@ -58,7 +66,7 @@ PR・Issueも調べる場合は、GitHub CLIをインストールし、`gh auth 
 
 ## 保存されるファイル
 
-レポートは、分析を実行している作業フォルダの `reports/` に保存されます。
+レポートは、分析を実行している作業フォルダの `reports/` に保存されます。スキルのインストール先とは別なので、更新後も残ります。
 
 ```text
 reports/<所有者>/<リポジトリ名>/
@@ -96,13 +104,5 @@ export SKILL_ANATOMY_WORKSPACE="$HOME/.local/share/skill-anatomy"
 PRレビューだけの変更など、自動検知できない更新もあります。調べ直したい場合は `--refresh` を指定してください。
 
 </details>
-
-## 更新する
-
-```sh
-npx skills update skill-anatomy
-```
-
-上記の方法でインストールした場合、レポートはスキルのインストール先とは別の場所に保存されるため、更新後も残ります。
 
 [MIT License](LICENSE)
