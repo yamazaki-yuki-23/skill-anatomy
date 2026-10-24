@@ -27,7 +27,7 @@ function main(args: string[]): unknown {
     return;
   }
   if (['-V', '--version'].includes(command)) {
-    console.log('0.2.0');
+    console.log('0.3.0');
     return;
   }
   if (!['prepare', 'approve', 'complete'].includes(command))

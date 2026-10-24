@@ -28,10 +28,10 @@ Node.js 22以上とGitが必要です。
 
    ```sh
    # インストール
-   gh skill install yamazaki-yuki-23/skill-anatomy skill-anatomy --pin master
+   gh skill install yamazaki-yuki-23/skill-anatomy skill-anatomy
 
    # 更新
-   gh skill install yamazaki-yuki-23/skill-anatomy skill-anatomy --pin master --force
+   gh skill update skill-anatomy
    ```
 
 2. エージェントを再起動し、調べたいGitHubのURLを渡します。

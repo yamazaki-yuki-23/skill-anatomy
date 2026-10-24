@@ -28,10 +28,10 @@ Requires Node.js 22 or later and Git.
 
    ```sh
    # Install
-   gh skill install yamazaki-yuki-23/skill-anatomy skill-anatomy --pin master
+   gh skill install yamazaki-yuki-23/skill-anatomy skill-anatomy
 
    # Update
-   gh skill install yamazaki-yuki-23/skill-anatomy skill-anatomy --pin master --force
+   gh skill update skill-anatomy
    ```
 
 2. Restart your agent and pass the GitHub URL you want to study.
