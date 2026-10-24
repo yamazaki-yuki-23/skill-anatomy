@@ -49,9 +49,12 @@ export function reportPaths(skills: string[]): Record<string, string> {
     mapping[skill] = `skill-analyses/${name}.md`;
   }
   const counts = new Map<string, number>();
-  for (const report of Object.values(mapping)) counts.set(report, (counts.get(report) ?? 0) + 1);
+  for (const report of Object.values(mapping)) {
+    const key = report.toLowerCase();
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
   for (const [skill, report] of Object.entries(mapping)) {
-    if (counts.get(report)! > 1)
+    if (counts.get(report.toLowerCase())! > 1)
       mapping[skill] = `${report.slice(0, -3)}--${digest(skill).slice(0, 12)}.md`;
   }
   return mapping;

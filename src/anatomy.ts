@@ -69,7 +69,7 @@ export function prepareSnapshot(
     let reportHash: string | undefined;
     if (existsSync(reportPath)) reportHash = digest(readFileSync(reportPath, 'utf8'));
     const unchanged =
-      !options.refresh &&
+      !(options.refresh && selectedSkills.has(skill)) &&
       old.status === 'done' &&
       old.source_signature === signature &&
       old.index_hash === indexHash &&

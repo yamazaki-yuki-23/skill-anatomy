@@ -213,6 +213,17 @@ test('individual analysis preserves other reports and inventory', () => {
   assert.equal(prepared.plan.skills.length, 3);
 });
 
+test('individual forced refresh preserves completed skills outside the selection', () => {
+  const f = new Fixture();
+  f.finishAll();
+  const individual = f.prepare('/tree/main/skills/review', false, true);
+  assert.deepEqual(individual.result.pending, ['skills/review/SKILL.md']);
+  const state = readJson(individual.plan.state_file);
+  assert.equal(state.skills['skills/testing/SKILL.md'].status, 'done');
+  assert.equal(state.skills['skills/writing/SKILL.md'].status, 'done');
+  assert.deepEqual(f.prepare().result.pending, ['skills/review/SKILL.md']);
+});
+
 test('forced refresh survives interruption', () => {
   const f = new Fixture();
   f.finishAll();
@@ -229,6 +240,16 @@ test('root skills and duplicate namespaces have distinct reports', () => {
   assert.equal(result.total_skills, 5);
   assert.equal(new Set(plan.skills.map((e) => e.report)).size, 5);
   assert.ok(plan.skills.some((e) => e.report.endsWith(`${path.sep}root.md`)));
+});
+
+test('report paths remain distinct on case-insensitive filesystems', () => {
+  const f = new Fixture();
+  f.write('skills/Foo/SKILL.md', '# Foo\n');
+  f.write('.agents/skills/foo/SKILL.md', '# Another foo\n');
+  f.commit('Add case-folding report collision');
+  const { plan } = f.prepare();
+  const reports = plan.skills.map((entry) => entry.report.toLowerCase());
+  assert.equal(new Set(reports).size, reports.length);
 });
 
 test('removed skills retain existing reports', () => {
