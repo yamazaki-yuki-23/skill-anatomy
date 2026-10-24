@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-anatomy_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
+anatomy_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)/skills/skill-anatomy
 anatomy_agent=${1-both}
 anatomy_dry_run=${2-}
 case "$anatomy_agent" in

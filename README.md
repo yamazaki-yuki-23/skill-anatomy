@@ -14,10 +14,16 @@ See the [analysis of Skill anatomy itself, in Japanese](examples/skill-anatomy.m
 
 Requires Node.js 22 or later and Git.
 
-1. Install the skill. Choose your agent and installation location when prompted.
+1. Install the skill with either command. Choose your agent and installation location when prompted.
 
    ```sh
    npx skills add yamazaki-yuki-23/skill-anatomy
+   ```
+
+   Or use the GitHub CLI:
+
+   ```sh
+   gh skill install yamazaki-yuki-23/skill-anatomy skill-anatomy --pin master
    ```
 
 2. Restart your agent and pass the GitHub URL you want to study.

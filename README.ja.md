@@ -14,10 +14,16 @@ GitHub上のスキルのURLを渡すと、仕組みや設計の工夫、自作�
 
 Node.js 22以上とGitが必要です。
 
-1. スキルをインストールします。使うエージェントとインストール先は、実行時に選べます。
+1. 次のどちらかでスキルをインストールします。使うエージェントとインストール先は、実行時に選べます。
 
    ```sh
    npx skills add yamazaki-yuki-23/skill-anatomy
+   ```
+
+   GitHub CLIを使う場合
+
+   ```sh
+   gh skill install yamazaki-yuki-23/skill-anatomy skill-anatomy --pin master
    ```
 
 2. エージェントを再起動し、調べたいGitHubのURLを渡します。

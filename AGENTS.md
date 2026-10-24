@@ -6,44 +6,39 @@ Skill anatomyは、スキルの仕組みを知り、自作に活かすためのA
 
 | パス | 役割 |
 | --- | --- |
-| `src/anatomy.ts` | スキルの検出、調査計画、チェックポイント、完了記録 |
+| `src/anatomy.ts` | 調査計画の作成 |
+| `src/repository.ts`、`src/skills.ts` | Git取得、URL判別、スキル検出 |
+| `src/fingerprint.ts`、`src/state.ts` | 差分判定、承認と完了記録 |
+| `src/storage.ts`、`src/workspace.ts` | 保存処理と保存先の検証 |
 | `src/cli.ts` | CLIの実装 |
-| `dist/` | コンパイル済みのJavaScript。Gitで管理し、インストール先ではビルド不要 |
+| `skills/skill-anatomy/dist/` | コンパイル済みのJavaScript。Gitで管理し、インストール先ではビルド不要 |
 | `scripts/anatomy` | CLIの起動スクリプト |
-| `SKILL.md` | エージェントの作業手順 |
-| `references/`、`assets/templates/` | 補足資料、レポートのテンプレート |
-| `agents/openai.yaml`、`examples/` | エージェントのメタデータ、レポート例 |
+| `skills/skill-anatomy/SKILL.md` | エージェントの作業手順 |
+| `skills/skill-anatomy/references/`、`skills/skill-anatomy/assets/templates/` | 補足資料、レポートのテンプレート |
+| `skills/skill-anatomy/agents/openai.yaml`、`examples/` | エージェントのメタデータ、レポート例 |
 | `tests/` | テストとチェックポイントのテストデータ |
 
 利用者向けの動作説明を変えるときは、`README.md` と `README.ja.md` の内容を揃えてください。
 
 ## ビルド・テスト・開発コマンド
 
-Node.js 22以降とGitを使い、リポジトリのルートで実行してください。
+開発にはBun 1.3.8以降、Node.js 22以降とGitを使い、リポジトリのルートで実行してください。
 
-1. `npm ci --ignore-scripts`：ロックファイルに従って開発用の依存パッケージをインストール。
-2. `npm run check`：TypeScriptの型チェック。ファイル出力なし。
-3. `npm run build`：ソースから `dist/` を再生成。
-4. `npm run check:dist`：`dist/` がソースのビルド結果と一致するか確認。
-5. `npm test`：全テストを実行。
+1. `bun install --frozen-lockfile --ignore-scripts`で開発用の依存を導入します。
+2. `bun run format`でコードを整形します。
+3. `bun run check`、`bun run lint`、`bun run format:check`で型・命名・書式を検査します。
+4. `bun run build`で`skills/skill-anatomy/dist/`を再生成し、`bun run check:dist`で一致を確認します。
+5. `bun run test`でVitestを実行します。
 
-CLIの使い方は `node dist/cli.js --help` で確認できます。ソースを変更したら、再生成した `dist/` も同じコミットに含めてください。CIではNode.js 22と24で型チェック、配布ファイルの整合性確認、テストを実行します。
+書式は`.oxfmtrc.json`、命名とコードの規約は`.oxlintrc.json`と`scripts/style-rules.mjs`で検査します。CIでも同じ検査を実行します。状態ファイルとGitHub APIのキーは、互換性のため元の表記を維持します。
 
-## コーディングスタイルと命名規則
-
-インデントはスペース2個、文字列はシングルクォート、文末はセミコロンとします。TypeScriptのESモジュールを使います。
-
-- 組み込みモジュールには `node:` を付ける。
-- 型には `import type` を使う。
-- ローカルファイルには `.js` 拡張子を指定する。
-
-関数・変数はcamelCase、インターフェースはPascalCase、定数は `PACKAGE_ROOT` のように大文字とアンダースコアで命名します。フォーマッターやリンターは未設定です。周辺コードと `tsconfig.json` に合わせてください。
+ソース変更時は、再生成した`skills/skill-anatomy/dist/`を同じコミットに含めてください。利用者向けCLIの使い方は`node skills/skill-anatomy/dist/cli.js --help`で確認できます。
 
 ## テスト方針
 
-テストは `tests/*.test.mjs` に置き、`node:test` と `node:assert/strict` を使います。`dist/` を読み込むため、ソース変更後はビルドしてからテストしてください。
+テストは`tests/*.test.mjs`に置き、Vitestを使います。ローカルGitリポジトリと一時ディレクトリを使い、`onTestFinished`で後片付けを登録してください。承認、分析の再開、保存先の安全性に影響する変更では、それぞれの動作を検証します。
 
-テスト名には検証する動作を記載してください。一時ディレクトリとローカルGitリポジトリを使い、後片付けは既存のテストに合わせてください。承認が必要な操作、分析の再開、パスの安全性に影響する変更では、それぞれの動作を検証します。カバレッジの数値目標は未設定です。
+配布テストでは、ソースや開発依存を含まないインストール先でCLIが動作することを確認します。`bun run test:security`はログイン済みCodexを使う任意の挙動検証で、通常のテストやCIには含めません。
 
 ## コミットとプルリクエスト
 

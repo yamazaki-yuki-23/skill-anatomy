@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import { parseArgs } from 'node:util';
 import type { ParseArgsOptionsConfig } from 'node:util';
-import { approve, complete, defaultWorkspace, prepare } from './anatomy.js';
+import { prepare } from './anatomy.js';
+import { approve, complete } from './state.js';
+import { defaultWorkspace } from './workspace.js';
 
 const HELP = `GitHubスキルの分析準備・差分検出・完了記録
 
@@ -20,29 +22,53 @@ const HELP = `GitHubスキルの分析準備・差分検出・完了記録
 
 function main(args: string[]): unknown {
   const [command, ...rest] = args;
-  if (!command || ['-h', '--help', 'help'].includes(command)) { console.log(HELP); return; }
-  if (['-V', '--version'].includes(command)) { console.log('0.2.0'); return; }
-  if (!['prepare', 'approve', 'complete'].includes(command)) throw new Error(`不明なコマンドです: ${command}`);
+  if (!command || ['-h', '--help', 'help'].includes(command)) {
+    console.log(HELP);
+    return;
+  }
+  if (['-V', '--version'].includes(command)) {
+    console.log('0.2.0');
+    return;
+  }
+  if (!['prepare', 'approve', 'complete'].includes(command))
+    throw new Error(`不明なコマンドです: ${command}`);
   const options: ParseArgsOptionsConfig = { help: { type: 'boolean', short: 'h' } };
-  if (command === 'prepare') Object.assign(options, {
-    'no-confirm': { type: 'boolean' }, refresh: { type: 'boolean' }, 'tool-root': { type: 'string' },
-  });
-  if (command === 'complete') Object.assign(options, {
-    skill: { type: 'string' }, repository: { type: 'boolean' }, dependency: { type: 'string', multiple: true },
-  });
+  if (command === 'prepare')
+    Object.assign(options, {
+      'no-confirm': { type: 'boolean' },
+      refresh: { type: 'boolean' },
+      'tool-root': { type: 'string' },
+    });
+  if (command === 'complete')
+    Object.assign(options, {
+      skill: { type: 'string' },
+      repository: { type: 'boolean' },
+      dependency: { type: 'string', multiple: true },
+    });
   const parsed = parseArgs({ args: rest, allowPositionals: true, strict: true, options });
-  if (parsed.values.help) { console.log(HELP); return; }
-  if (parsed.positionals.length !== 1) throw new Error('URLまたはPLANを1つ指定してください。--helpで使い方を確認できます');
+  if (parsed.values.help) {
+    console.log(HELP);
+    return;
+  }
+  if (parsed.positionals.length !== 1)
+    throw new Error('URLまたはPLANを1つ指定してください。--helpで使い方を確認できます');
   const [input] = parsed.positionals;
   const values = parsed.values;
-  if (command === 'prepare') return prepare({ url: input!, toolRoot: values['tool-root'] as string | undefined ?? defaultWorkspace(),
-    noConfirm: values['no-confirm'] === true, refresh: values.refresh === true });
+  if (command === 'prepare')
+    return prepare({
+      url: input!,
+      toolRoot: (values['tool-root'] as string | undefined) ?? defaultWorkspace(),
+      noConfirm: values['no-confirm'] === true,
+      refresh: values.refresh === true,
+    });
   if (command === 'approve') return approve(input!);
   const skill = values.skill as string | undefined;
   const repository = values.repository === true;
-  const dependencies = values.dependency as string[] | undefined ?? [];
-  if (Boolean(skill) === repository) throw new Error('--skillか--repositoryのどちらか1つを指定してください');
-  if (dependencies.length && !skill) throw new Error('--dependencyは--skillと一緒に指定してください');
+  const dependencies = (values.dependency as string[] | undefined) ?? [];
+  if (Boolean(skill) === repository)
+    throw new Error('--skillか--repositoryのどちらか1つを指定してください');
+  if (dependencies.length && !skill)
+    throw new Error('--dependencyは--skillと一緒に指定してください');
   return complete(input!, skill, repository, dependencies);
 }
 
