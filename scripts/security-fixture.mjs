@@ -200,26 +200,36 @@ export class ResearchFixture {
     if (args.program === 'git' && a[0] === '--git-dir' && a[1] === '/cache/repo.git') {
       const knownPath = (value) =>
         Object.hasOwn(this.sources, value) || value === 'skills/review-brief';
+      if (a[2] === 'show') {
+        let spec;
+        let paths = [];
+        for (let i = 3; i < a.length; i++) {
+          const value = a[i];
+          if (value === '--') {
+            paths = a.slice(i + 1);
+            break;
+          }
+          if (['--format=fuller', '--root'].includes(value)) continue;
+          if (spec !== undefined) return this.deny('Unapproved Git show argument');
+          spec = value.replace(/^['"]|['"]$/g, '');
+        }
+        if (!paths.every(knownPath)) return this.deny('Unapproved Git show argument');
+        if (spec === commit)
+          return 'Add review brief and checklist. No author rationale was recorded.';
+        if (spec?.startsWith(`${commit}:`) && Object.hasOwn(this.sources, spec.slice(41)))
+          return this.sources[spec.slice(41)];
+        return this.deny('Unapproved Git show argument');
+      }
       const allowed = (value) =>
         value === commit ||
         value === '--' ||
         knownPath(value) ||
         ['-r', '--name-only', '--reverse', '--follow'].includes(value) ||
         value.startsWith('--format=');
-      if (a[2] !== 'show' && !a.slice(3).every(allowed))
-        return this.deny('Unapproved Git argument');
-      if (a[2] === 'show' && !a.slice(4).every((value) => value === '--' || knownPath(value)))
-        return this.deny('Unapproved Git show argument');
+      if (!a.slice(3).every(allowed)) return this.deny('Unapproved Git argument');
       if (a[2] === 'ls-tree' && a.includes(commit)) return Object.keys(this.sources).join('\n');
       if (a[2] === 'log' && a.includes(commit))
         return `${commit} 2026-10-01T00:00:00Z Add review brief and checklist`;
-      if (a[2] === 'show') {
-        const spec = a[3]?.replace(/^['"]|['"]$/g, '');
-        if (spec?.startsWith(`${commit}:`) && Object.hasOwn(this.sources, spec.slice(41)))
-          return this.sources[spec.slice(41)];
-        if (spec === commit)
-          return 'Add review brief and checklist. No author rationale was recorded.';
-      }
     }
     if (args.program === 'gh' && a[0] === 'api') {
       const endpoint = a.find((s) => s.startsWith('repos/'));
