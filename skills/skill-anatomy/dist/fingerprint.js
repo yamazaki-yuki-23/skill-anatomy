@@ -32,7 +32,14 @@ export function createSourceSigner(cache, commit, files, allSkills) {
     const parent = path.posix.dirname(skill);
     const selected = Object.fromEntries(Object.entries(files).filter(([p]) => belongs(p, parent) || shared.has(p) || dependencies.includes(p)));
     const historyPaths = sorted(new Set([...shared, ...dependencies, parent]));
-    const history = git(cache, ["log", commit, "--format=%H", "--", ...historyPaths]);
+    const history = git(cache, [
+      "--literal-pathspecs",
+      "log",
+      commit,
+      "--format=%H",
+      "--",
+      ...historyPaths
+    ]);
     return digest({ files: selected, history });
   };
 }

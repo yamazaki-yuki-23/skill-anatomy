@@ -45,7 +45,14 @@ export function createSourceSigner(
       ),
     );
     const historyPaths = sorted(new Set([...shared, ...dependencies, parent]));
-    const history = git(cache, ['log', commit, '--format=%H', '--', ...historyPaths]);
+    const history = git(cache, [
+      '--literal-pathspecs',
+      'log',
+      commit,
+      '--format=%H',
+      '--',
+      ...historyPaths,
+    ]);
     return digest({ files: selected, history });
   };
 }

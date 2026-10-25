@@ -443,3 +443,76 @@ test('missing dependencies and blank reports cannot be completed', () => {
   writeFileSync(entry.report, '\n');
   assert.throws(() => complete(prepared.planFile, entry.skill), /空です/);
 });
+
+test.each([
+  {
+    kind: 'pathspec-magic skill',
+    target: ':(exclude)skills/review/SKILL.md',
+    unrelated: 'skills/review/SKILL.md',
+    watched: ':(exclude)skills/review/SKILL.md',
+    extraSkill: 'skills/testing/SKILL.md',
+    relevantPending: [':(exclude)skills/review/SKILL.md'],
+    unrelatedPending: ['skills/review/SKILL.md'],
+  },
+  {
+    kind: 'skill',
+    target: 'skills/[review]/SKILL.md',
+    unrelated: 'skills/r/SKILL.md',
+    watched: 'skills/[review]/SKILL.md',
+    extraSkill: 'skills/r/SKILL.md',
+    relevantPending: ['skills/[review]/SKILL.md'],
+    unrelatedPending: ['skills/r/SKILL.md'],
+  },
+  {
+    kind: 'shared file',
+    target: '[docs]/guide.md',
+    unrelated: 'd/guide.md',
+    watched: 'skills/review/SKILL.md',
+    extraSkill: 'd/SKILL.md',
+    relevantPending: [
+      'd/SKILL.md',
+      'skills/review/SKILL.md',
+      'skills/testing/SKILL.md',
+      'skills/writing/SKILL.md',
+    ],
+    unrelatedPending: ['d/SKILL.md'],
+  },
+  {
+    kind: 'dependency',
+    target: 'skills/testing/references/[guide].md',
+    unrelated: 'skills/testing/references/g.md',
+    watched: 'skills/review/SKILL.md',
+    extraSkill: 'skills/testing/SKILL.md',
+    relevantPending: ['skills/review/SKILL.md', 'skills/testing/SKILL.md'],
+    unrelatedPending: ['skills/testing/SKILL.md'],
+  },
+])('history treats $kind paths literally when blobs are restored', (scenario) => {
+  const f = new Fixture();
+  f.write(scenario.extraSkill, '# Extra skill\n');
+  f.write(scenario.target, '# Original\n');
+  f.write(scenario.unrelated, '# Original\n');
+  f.commit('Add literal and pathspec-matching paths');
+  const finish = () => {
+    const prepared = f.prepare('', true);
+    for (const entry of prepared.plan.skills) {
+      const dependencies =
+        scenario.kind === 'dependency' && entry.skill === scenario.watched ? [scenario.target] : [];
+      f.finish(prepared, entry.skill, dependencies);
+    }
+  };
+  const changeAndRestore = (file: string) => {
+    const tree = f.git('rev-parse', 'HEAD^{tree}');
+    f.write(file, '# Temporary change\n');
+    f.commit('Change content without retaining the new blob');
+    f.write(file, '# Original\n');
+    f.commit('Restore the original blob');
+    assert.equal(f.git('rev-parse', 'HEAD^{tree}'), tree);
+  };
+  finish();
+  assert.deepEqual(f.prepare().result.pending, []);
+  changeAndRestore(scenario.target);
+  assert.deepEqual(f.prepare().result.pending.sort(), [...scenario.relevantPending].sort());
+  finish();
+  changeAndRestore(scenario.unrelated);
+  assert.deepEqual(f.prepare().result.pending.sort(), [...scenario.unrelatedPending].sort());
+});
