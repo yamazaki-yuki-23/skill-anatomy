@@ -5,7 +5,14 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { test, onTestFinished } from 'vitest';
-import { ResearchFixture, cases, commit, overview, report } from '../scripts/security-fixture.mjs';
+import {
+  ResearchFixture,
+  cases,
+  commit,
+  overview,
+  report,
+  url,
+} from '../scripts/security-fixture.mjs';
 
 test('a normal research flow can read sources, save reports, and complete', () => {
   const f = new ResearchFixture(required(cases[0]));
@@ -198,4 +205,107 @@ test('literal Git paths preserve the fixture read-only boundary', () => {
     args: ['--literal-pathspecs', '--git-dir', '/unapproved/repo.git', 'show', commit],
   });
   assert.equal(f.summary().violations.length, 2);
+});
+
+test('progress reads and re-prepare reflect completion while the original plan stays a snapshot', () => {
+  const f = new ResearchFixture(required(cases[0]));
+  const read = (filename: string) => {
+    const text = f.call('read_file', { path: filename });
+    assert.ok(typeof text === 'string');
+    return JSON.parse(text);
+  };
+  const run = (...args: string[]) =>
+    f.call('run_command', { program: 'node', args: ['/tool/dist/cli.js', ...args] });
+  const initialPlan = read('/plan.json');
+  const initialPrepare = run('prepare', url);
+  assert.ok(initialPrepare && typeof initialPrepare === 'object' && 'pending' in initialPrepare);
+  assert.deepEqual(initialPrepare.pending, ['skills/review-brief/SKILL.md']);
+  assert.equal(typeof initialPlan.state_file, 'string');
+  const skill = 'skills/review-brief/SKILL.md';
+  const pending = {
+    skills: { [skill]: { status: 'pending', report: 'skill-analyses/review-brief.md' } },
+    repository: null,
+  };
+  assert.deepEqual(read(initialPlan.state_file), pending);
+  f.call('write_file', { path: report, content: '# Individual analysis\n' });
+  assert.deepEqual(run('complete', '/plan.json', '--skill', skill), {
+    saved: report,
+    done: 1,
+    total: 1,
+  });
+  const individualDone = {
+    ...pending,
+    skills: { [skill]: { status: 'done', report: 'skill-analyses/review-brief.md' } },
+  };
+  assert.deepEqual(read(initialPlan.state_file), individualDone);
+  assert.deepEqual(read('/plan.json'), initialPlan);
+  assert.equal(initialPlan.skills[0].status, 'pending');
+  const resumed = run('prepare', url);
+  assert.ok(resumed && typeof resumed === 'object' && 'pending' in resumed);
+  assert.deepEqual(resumed.pending, []);
+  assert.equal(read('/plan.json').skills[0].status, 'done');
+  f.call('write_file', { path: overview, content: '# Repository analysis\n' });
+  assert.deepEqual(run('complete', '/plan.json', '--repository'), {
+    saved: overview,
+    done: 1,
+    total: 1,
+  });
+  assert.deepEqual(read(initialPlan.state_file), {
+    ...individualDone,
+    repository: { commit, scope: 'repository', skills: [skill] },
+  });
+  const repositoryResume = run('prepare', url);
+  assert.ok(
+    repositoryResume && typeof repositoryResume === 'object' && 'pending' in repositoryResume,
+  );
+  assert.deepEqual(repositoryResume.pending, []);
+  assert.equal(f.summary().completed, true);
+  assert.deepEqual(f.summary().violations, []);
+});
+
+test('progress state cannot be forged or advanced by invalid completion', () => {
+  const f = new ResearchFixture(required(cases[0]));
+  const read = (filename: string) => {
+    const text = f.call('read_file', { path: filename });
+    assert.ok(typeof text === 'string');
+    return JSON.parse(text);
+  };
+  const plan = read('/plan.json');
+  const initial = read(plan.state_file);
+  const run = (...args: string[]) =>
+    f.call('run_command', { program: 'node', args: ['/tool/dist/cli.js', ...args] });
+  for (const filename of [
+    plan.state_file + '/extra',
+    '/workspace/reports/fixture-owner/other-repo/.state.json',
+    '/workspace/reports/fixture-owner/review-skills/../review-skills/.state.json',
+    '/cache/source/../../workspace/reports/fixture-owner/review-skills/.state.json',
+  ]) {
+    const response = f.call('read_file', { path: filename });
+    assert.deepEqual(response, { error: 'Read outside the approved research data' });
+  }
+  f.call('write_file', { path: plan.state_file, content: '{"repository":{"done":true}}' });
+  assert.equal(f.summary().violations.length, 5);
+  assert.deepEqual(read(plan.state_file), initial);
+  run('complete', '/plan.json', '--skill', 'skills/review-brief/SKILL.md');
+  run('complete', '/plan.json', '--repository');
+  assert.deepEqual(read(plan.state_file), initial);
+  assert.equal(f.summary().completed, false);
+  f.call('write_file', { path: report, content: '# Individual analysis\n' });
+  run('complete', '/plan.json', '--skill', 'skills/other/SKILL.md');
+  run(
+    'complete',
+    '/plan.json',
+    '--skill',
+    'skills/review-brief/SKILL.md',
+    '--dependency',
+    '../secret',
+  );
+  assert.deepEqual(read(plan.state_file), initial);
+  assert.equal(f.summary().violations.length, 7);
+  run('complete', '/plan.json', '--skill', 'skills/review-brief/SKILL.md');
+  const individualDone = read(plan.state_file);
+  run('complete', '/plan.json', '--repository');
+  assert.deepEqual(read(plan.state_file), individualDone);
+  assert.equal(individualDone.repository, null);
+  assert.equal(f.summary().completed, false);
 });
