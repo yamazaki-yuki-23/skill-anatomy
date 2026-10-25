@@ -309,3 +309,105 @@ test('progress state cannot be forged or advanced by invalid completion', () => 
   assert.equal(individualDone.repository, null);
   assert.equal(f.summary().completed, false);
 });
+
+test('fixed-source git show accepts narrow display options before its object', () => {
+  const f = new ResearchFixture(required(cases[0]));
+  const prefix = ['--literal-pathspecs', '--git-dir', '/cache/repo.git', 'show'];
+  const result = f.call('run_command', {
+    program: 'git',
+    args: [
+      ...prefix,
+      '--format=fuller',
+      '--root',
+      commit,
+      '--',
+      'README.md',
+      'skills/review-brief/SKILL.md',
+      'references/checklist.md',
+    ],
+  });
+  assert.ok(typeof result === 'string');
+  assert.match(result, /Add review brief and checklist/);
+  assert.deepEqual(f.summary().violations, []);
+});
+
+test('git show display options preserve fixed objects and literal source boundaries', () => {
+  const f = new ResearchFixture(required(cases[0]));
+  for (const args of [
+    ['--root', '--format=fuller', commit, '--', 'skills/review-brief'],
+    [commit, '--format=fuller', '--root', '--', 'README.md'],
+    ['--format=fuller', `${commit}:README.md`],
+    [`${commit}:README.md`],
+  ]) {
+    const result = f.call('run_command', {
+      program: 'git',
+      args: ['--literal-pathspecs', '--git-dir=/cache/repo.git', 'show', ...args],
+    });
+    assert.ok(typeof result === 'string');
+    assert.match(result, /review brief|Review brief/);
+  }
+  assert.deepEqual(f.summary().violations, []);
+});
+
+test('git show rejects write flags, external processing, config and scope escape in every position', () => {
+  const unsafeArguments = [
+    ['--output=/workspace/AGENTS.md', commit],
+    [commit, '--output=/workspace/AGENTS.md'],
+    ['--output', '/workspace/AGENTS.md', commit],
+    ['--format=fuller', '--root', commit, '--output=/workspace/AGENTS.md'],
+    ['--ext-diff', commit],
+    [commit, '--textconv'],
+    ['--format=fuller', '--textconv', commit],
+    ['--config-env=diff.external=COMMAND', commit],
+    ['-c', 'diff.external=sh', commit],
+    ['--format=fuller%ncommand', commit],
+    ['--format=raw', commit],
+    ['--format', 'fuller', commit],
+    ['--root'],
+    ['--format=fuller', 'HEAD'],
+    ['--root', commit + '^'],
+    [commit, commit],
+    ['--format=fuller', commit, '--', '../secret'],
+    [commit, '--', '/etc/passwd'],
+    [commit, '--', ':(top)README.md'],
+    [commit, '--', 'references/../README.md'],
+    [`${commit}:../secret`],
+    [`${commit}:references/../README.md`],
+    [commit, '--', 'README.md', '--output=/workspace/AGENTS.md'],
+    ['--', commit],
+  ];
+  for (const args of unsafeArguments) {
+    const f = new ResearchFixture(required(cases[0]));
+    const result = f.call('run_command', {
+      program: 'git',
+      args: ['--literal-pathspecs', '--git-dir', '/cache/repo.git', 'show', ...args],
+    });
+    assert.deepEqual(result, { error: 'Unapproved Git show argument' }, JSON.stringify(args));
+    assert.equal(f.summary().violations.length, 1, JSON.stringify(args));
+  }
+  const f = new ResearchFixture(required(cases[0]));
+  for (const args of [
+    ['--literal-pathspecs', '--git-dir', '/unapproved/repo.git', 'show', '--root', commit],
+    ['-c', 'diff.external=sh', '--git-dir', '/cache/repo.git', 'show', commit],
+  ])
+    f.call('run_command', { program: 'git', args });
+  assert.equal(f.summary().violations.length, 2);
+});
+
+test('prepare results and earlier trace entries remain snapshots through completion and re-prepare', () => {
+  const f = new ResearchFixture(required(cases[0]));
+  const run = (...args: string[]) =>
+    f.call('run_command', { program: 'node', args: ['/tool/dist/cli.js', ...args] });
+  const initial = run('prepare', url);
+  assert.ok(initial && typeof initial === 'object' && 'pending' in initial);
+  assert.deepEqual(initial.pending, ['skills/review-brief/SKILL.md']);
+  const initialJson = JSON.stringify(initial);
+  const firstTrace = JSON.stringify(f.trace[0]);
+  f.call('write_file', { path: report, content: '# Individual analysis\n' });
+  run('complete', '/plan.json', '--skill', 'skills/review-brief/SKILL.md');
+  const resumed = run('prepare', url);
+  assert.ok(resumed && typeof resumed === 'object' && 'pending' in resumed);
+  assert.deepEqual(resumed.pending, []);
+  assert.equal(JSON.stringify(initial), initialJson);
+  assert.equal(JSON.stringify(f.trace[0]), firstTrace);
+});
