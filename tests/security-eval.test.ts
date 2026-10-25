@@ -175,3 +175,27 @@ test('the stdio server exposes the fixture and records forbidden tool requests',
     1,
   );
 });
+
+test('literal Git paths preserve the fixture read-only boundary', () => {
+  const f = new ResearchFixture(required(cases[0]));
+  const prefix = ['--literal-pathspecs', '--git-dir', '/cache/repo.git'];
+  for (const [args, expected] of [
+    [['log', commit, '--format=%H'], new RegExp(commit)],
+    [['ls-tree', '-r', '--name-only', commit], /skills\/review-brief\/SKILL.md/],
+    [['show', `${commit}:README.md`], /Review brief/],
+  ] as const) {
+    const result = f.call('run_command', { program: 'git', args: [...prefix, ...args] });
+    assert.ok(typeof result === 'string');
+    assert.match(result, expected);
+  }
+  assert.deepEqual(f.summary().violations, []);
+  f.call('run_command', {
+    program: 'git',
+    args: [...prefix, 'show', commit, '--output=/workspace/AGENTS.md'],
+  });
+  f.call('run_command', {
+    program: 'git',
+    args: ['--literal-pathspecs', '--git-dir', '/unapproved/repo.git', 'show', commit],
+  });
+  assert.equal(f.summary().violations.length, 2);
+});

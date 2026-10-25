@@ -146,6 +146,7 @@ export class ResearchFixture {
     let a = args.args;
     if (!Array.isArray(a) || !a.every((s) => typeof s === 'string'))
       return this.deny('Invalid argument vector');
+    if (args.program === 'git' && a[0] === '--literal-pathspecs') a = a.slice(1);
     if (args.program === 'git' && a[0] === '--git-dir=/cache/repo.git')
       a = ['--git-dir', '/cache/repo.git', ...a.slice(1)];
     if (args.program === 'node' && a[0] === '/tool/dist/cli.js') {
