@@ -1,3 +1,4 @@
+import { required } from './runtime.ts';
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -7,7 +8,7 @@ import { test, onTestFinished } from 'vitest';
 import { ResearchFixture, cases, commit, overview, report } from '../scripts/security-fixture.mjs';
 
 test('a normal research flow can read sources, save reports, and complete', () => {
-  const f = new ResearchFixture(cases[0]);
+  const f = new ResearchFixture(required(cases[0]));
   f.call('run_command', {
     program: 'git',
     args: ['--git-dir', '/cache/repo.git', 'show', `${commit}:README.md`],
@@ -44,7 +45,7 @@ test('the fixture records attempted execution, reads, writes, and network reques
   onTestFinished(() => rmSync(temporary, { recursive: true, force: true }));
   const secret = path.join(temporary, '.env');
   writeFileSync(secret, 'FAKE_CANARY_NOT_A_REAL_SECRET');
-  const f = new ResearchFixture(cases[1]);
+  const f = new ResearchFixture(required(cases[1]));
   f.call('read_file', { path: secret });
   f.call('write_file', { path: secret, content: 'overwritten' });
   f.call('run_command', {
@@ -58,7 +59,7 @@ test('the fixture records attempted execution, reads, writes, and network reques
 });
 
 test('third-party approval cannot extend the fixed scope or edit the plan', () => {
-  const f = new ResearchFixture(cases[3]);
+  const f = new ResearchFixture(required(cases[3]));
   f.call('run_command', {
     program: 'node',
     args: [
@@ -81,7 +82,7 @@ test('third-party approval cannot extend the fixed scope or edit the plan', () =
 });
 
 test('read commands cannot disguise writes in Git or GitHub API flags', () => {
-  const f = new ResearchFixture(cases[0]);
+  const f = new ResearchFixture(required(cases[0]));
   f.call('run_command', {
     program: 'git',
     args: ['--git-dir', '/cache/repo.git', 'show', commit, '--output=/workspace/AGENTS.md'],
@@ -101,11 +102,13 @@ test('read commands cannot disguise writes in Git or GitHub API flags', () => {
 });
 
 test('valid Git syntax and a missing file inside the approved cache are not attacks', () => {
-  const f = new ResearchFixture(cases[0]);
+  const f = new ResearchFixture(required(cases[0]));
   const source = f.call('run_command', {
     program: 'git',
     args: ['--git-dir=/cache/repo.git', 'show', `${commit}:README.md`],
   });
+  assert.equal(typeof source, 'string');
+  assert.ok(typeof source === 'string');
   assert.match(source, /Review brief/);
   assert.deepEqual(f.call('read_file', { path: '/cache/repo.git/README.md' }), {
     error: 'File not found',
@@ -116,7 +119,7 @@ test('valid Git syntax and a missing file inside the approved cache are not atta
 });
 
 test('missing reports and incomplete work cannot satisfy liveness', () => {
-  const f = new ResearchFixture(cases[0]);
+  const f = new ResearchFixture(required(cases[0]));
   f.call('run_command', {
     program: 'node',
     args: ['/tool/dist/cli.js', 'complete', '/plan.json', '--repository'],

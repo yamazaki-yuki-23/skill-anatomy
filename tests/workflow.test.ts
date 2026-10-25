@@ -1,4 +1,4 @@
-import { nodeExecutable } from './runtime.mjs';
+import { nodeExecutable, required } from './runtime.ts';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import {
@@ -22,8 +22,36 @@ import { inside, readJson } from '../src/storage.ts';
 import { parseUrl } from '../src/repository.ts';
 import { prepareSnapshot } from '../src/anatomy.ts';
 
+import type { Plan, State, GithubIndex, Files } from '../src/types.js';
+
 const cli = fileURLToPath(new URL('../skills/skill-anatomy/dist/cli.js', import.meta.url));
+interface Prepared {
+  result: {
+    'plan_file': string;
+    approved: boolean;
+    pending: string[];
+    scope: string;
+    'selected_skills': number;
+    'total_skills': number;
+    'index_status': string;
+    warning: string | null;
+  };
+  plan: Plan;
+  planFile: string;
+}
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+function doneCount(value: unknown): number {
+  assert.ok(value && typeof value === 'object' && 'done' in value);
+  assert.ok(typeof value.done === 'number');
+  return value.done;
+}
 class Fixture {
+  base: string;
+  source: string;
+  root: string;
+  index: GithubIndex;
   constructor() {
     this.base = mkdtempSync(path.join(tmpdir(), 'skill-anatomy-test-'));
     onTestFinished(() => rmSync(this.base, { recursive: true, force: true }));
@@ -45,21 +73,21 @@ class Fixture {
     this.write('skills/testing/references/shared.md', 'First version\n');
     this.commit('Initial skills');
   }
-  git(...args) {
+  git(...args: string[]) {
     const result = spawnSync('git', ['-C', this.source, ...args], { encoding: 'utf8' });
     assert.equal(result.status, 0, result.stderr);
     return result.stdout.trim();
   }
-  write(filename, text) {
+  write(filename: string, text: string) {
     const output = path.join(this.source, filename);
     mkdirSync(path.dirname(output), { recursive: true });
     writeFileSync(output, text);
   }
-  commit(message) {
+  commit(message: string) {
     this.git('add', '.');
     this.git('commit', '-m', message);
   }
-  prepare(suffix = '', noConfirm = false, refresh = false) {
+  prepare(suffix = '', noConfirm = false, refresh = false): Prepared {
     const options = {
       url: `https://github.com/Alice/Agent-Skills${suffix}`,
       toolRoot: this.root,
@@ -74,10 +102,34 @@ class Fixture {
       'refs/heads/main',
       this.index,
     );
-    return { result, plan: readJson(result.plan_file), planFile: result.plan_file };
+    assert.ok(typeof result.plan_file === 'string');
+    assert.ok(typeof result.approved === 'boolean');
+    assert.ok(isStringArray(result.pending));
+    assert.ok(typeof result.scope === 'string');
+    assert.ok(typeof result.selected_skills === 'number');
+    assert.ok(typeof result.total_skills === 'number');
+    assert.ok(typeof result.index_status === 'string');
+    assert.ok(result.warning === null || typeof result.warning === 'string');
+    const preparedResult = {
+      ...result,
+      'plan_file': result.plan_file,
+      approved: result.approved,
+      pending: result.pending,
+      scope: result.scope,
+      'selected_skills': result.selected_skills,
+      'total_skills': result.total_skills,
+      'index_status': result.index_status,
+      warning: result.warning,
+    };
+    return {
+      result: preparedResult,
+      plan: readJson<Plan>(result.plan_file),
+      planFile: result.plan_file,
+    };
   }
-  finish(prepared, skill, dependencies = []) {
+  finish(prepared: Prepared, skill: string, dependencies: string[] = []) {
     const entry = prepared.plan.skills.find((e) => e.skill === skill);
+    assert.ok(entry);
     mkdirSync(path.dirname(entry.report), { recursive: true });
     writeFileSync(entry.report, '# テスト用分析\nソースに基づく説明。\n');
     return complete(prepared.planFile, skill, false, dependencies);
@@ -96,16 +148,17 @@ test('confirmation gate, missing report and completion count', () => {
   assert.throws(() => f.finish(prepared, 'skills/review/SKILL.md'), /未承認/);
   approve(prepared.planFile);
   assert.throws(() => complete(prepared.planFile, 'skills/testing/SKILL.md'), /先に保存/);
-  assert.equal(f.finish(prepared, 'skills/review/SKILL.md').done, 1);
+  assert.equal(doneCount(f.finish(prepared, 'skills/review/SKILL.md')), 1);
 });
 
 test('distributed Node CLI preserves the approval gate and records completed reports', () => {
   const f = new Fixture();
   const prepared = f.prepare();
-  const entry = prepared.plan.skills[0];
+  const entry = required(prepared.plan.skills[0]);
   mkdirSync(path.dirname(entry.report), { recursive: true });
   writeFileSync(entry.report, '# 分析済み\n');
-  const invoke = (...args) => spawnSync(nodeExecutable, [cli, ...args], { encoding: 'utf8' });
+  const invoke = (...args: string[]) =>
+    spawnSync(nodeExecutable, [cli, ...args], { encoding: 'utf8' });
   const blocked = invoke('complete', prepared.planFile, '--skill', entry.skill);
   assert.equal(blocked.status, 1);
   assert.match(blocked.stderr, /未承認/);
@@ -114,7 +167,10 @@ test('distributed Node CLI preserves the approval gate and records completed rep
   const completed = invoke('complete', prepared.planFile, '--skill', entry.skill);
   assert.equal(completed.status, 0, completed.stderr);
   assert.equal(JSON.parse(completed.stdout).done, 1);
-  assert.equal(readJson(prepared.plan.state_file).skills[entry.skill].status, 'done');
+  assert.equal(
+    required(readJson<State>(prepared.plan.state_file).skills[entry.skill]).status,
+    'done',
+  );
 });
 
 test('repository, tree, blob, slash branch and commit URLs', () => {
@@ -198,13 +254,13 @@ test('repository completion requires every selected report', () => {
   writeFileSync(path.join(prepared.plan.destination, 'repository-analysis.md'), '# 全体分析\n');
   assert.throws(() => complete(prepared.planFile, undefined, true), /未完了/);
   for (const entry of prepared.plan.skills) f.finish(prepared, entry.skill);
-  assert.equal(complete(prepared.planFile, undefined, true).done, 3);
+  assert.equal(doneCount(complete(prepared.planFile, undefined, true)), 3);
 });
 
 test('individual analysis preserves other reports and inventory', () => {
   const f = new Fixture();
   const old = f.finishAll();
-  const report = old.plan.skills[1].report;
+  const report = required(old.plan.skills[1]).report;
   const before = readFileSync(report, 'utf8');
   const prepared = f.prepare('/tree/main/skills/review');
   assert.equal(prepared.result.selected_skills, 1);
@@ -218,9 +274,9 @@ test('individual forced refresh preserves completed skills outside the selection
   f.finishAll();
   const individual = f.prepare('/tree/main/skills/review', false, true);
   assert.deepEqual(individual.result.pending, ['skills/review/SKILL.md']);
-  const state = readJson(individual.plan.state_file);
-  assert.equal(state.skills['skills/testing/SKILL.md'].status, 'done');
-  assert.equal(state.skills['skills/writing/SKILL.md'].status, 'done');
+  const state = readJson<State>(individual.plan.state_file);
+  assert.equal(required(state.skills['skills/testing/SKILL.md']).status, 'done');
+  assert.equal(required(state.skills['skills/writing/SKILL.md']).status, 'done');
   assert.deepEqual(f.prepare().result.pending, ['skills/review/SKILL.md']);
 });
 
@@ -255,25 +311,27 @@ test('report paths remain distinct on case-insensitive filesystems', () => {
 test('removed skills retain existing reports', () => {
   const f = new Fixture();
   const old = f.finishAll();
-  const report = old.plan.skills.find((e) => e.skill === 'skills/review/SKILL.md').report;
+  const report = required(old.plan.skills.find((e) => e.skill === 'skills/review/SKILL.md')).report;
   unlinkSync(path.join(f.source, 'skills/review/SKILL.md'));
   f.commit('Remove review');
   const { plan } = f.prepare();
-  assert.deepEqual(readJson(plan.state_file).removed, ['skills/review/SKILL.md']);
+  assert.deepEqual(readJson<State>(plan.state_file).removed, ['skills/review/SKILL.md']);
   assert.ok(existsSync(report));
 });
 
 test('replacement skills cannot overwrite removed skill reports', () => {
   const f = new Fixture();
   const old = f.finishAll();
-  const report = old.plan.skills.find((e) => e.skill === 'skills/review/SKILL.md').report;
+  const report = required(old.plan.skills.find((e) => e.skill === 'skills/review/SKILL.md')).report;
   const contents = readFileSync(report, 'utf8');
   unlinkSync(path.join(f.source, 'skills/review/SKILL.md'));
   f.write('.agents/skills/review/SKILL.md', '# Replacement\n');
   f.commit('Replace review namespace');
   const current = f.prepare('', true);
   f.finish(current, '.agents/skills/review/SKILL.md');
-  const replacement = current.plan.skills.find((e) => e.skill === '.agents/skills/review/SKILL.md');
+  const replacement = required(
+    current.plan.skills.find((e) => e.skill === '.agents/skills/review/SKILL.md'),
+  );
   assert.notEqual(replacement.report.toLowerCase(), report.toLowerCase());
   assert.equal(readFileSync(report, 'utf8'), contents);
   assert.deepEqual(f.prepare().result.pending, []);
@@ -290,7 +348,7 @@ test('report files cannot collide with parent directories', () => {
 test('missing reports are not skipped', () => {
   const f = new Fixture();
   const old = f.finishAll();
-  unlinkSync(old.plan.skills.find((e) => e.skill === 'skills/review/SKILL.md').report);
+  unlinkSync(required(old.plan.skills.find((e) => e.skill === 'skills/review/SKILL.md')).report);
   assert.deepEqual(f.prepare().result.pending, ['skills/review/SKILL.md']);
 });
 
@@ -357,9 +415,15 @@ test('fingerprints keep Rust-compatible map key order and string encoding', () =
 });
 
 test('fingerprints match checkpoints produced by the former Rust binary', () => {
-  const fixture = readJson(
-    fileURLToPath(new URL('./fixtures/checkpoint-format-v2.json', import.meta.url)),
-  );
+  const fixture = readJson<{
+    files: Files;
+    history: string;
+    'source_signature': string;
+    'report_text': string;
+    'report_hash': string;
+    index: GithubIndex;
+    'index_hash': string;
+  }>(fileURLToPath(new URL('./fixtures/checkpoint-format-v2.json', import.meta.url)));
   assert.equal(
     digest({ files: fixture.files, history: fixture.history }),
     fixture.source_signature,
@@ -375,7 +439,7 @@ test('missing dependencies and blank reports cannot be completed', () => {
     () => f.finish(prepared, 'skills/review/SKILL.md', ['not-in-commit.md']),
     /存在しない/,
   );
-  const entry = prepared.plan.skills.find((e) => e.skill === 'skills/review/SKILL.md');
+  const entry = required(prepared.plan.skills.find((e) => e.skill === 'skills/review/SKILL.md'));
   writeFileSync(entry.report, '\n');
   assert.throws(() => complete(prepared.planFile, entry.skill), /空です/);
 });

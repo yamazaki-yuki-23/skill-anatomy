@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { onTestFinished, test } from 'vitest';
 
-function fixture(content) {
+function fixture(content: string) {
   mkdirSync('.cache', { recursive: true });
   const root = mkdtempSync(path.resolve('.cache/style-'));
   onTestFinished(() => rmSync(root, { recursive: true, force: true }));
@@ -12,7 +12,7 @@ function fixture(content) {
   return file;
 }
 
-function lint(file) {
+function lint(file: string) {
   return Bun.spawnSync([process.execPath, 'node_modules/oxlint/bin/oxlint', '--no-ignore', file]);
 }
 
@@ -42,7 +42,7 @@ test('oxlint accepts naming conventions and preserves serialized property names'
 
 test('oxfmt rejects unformatted code and fixes it to the configured style', () => {
   const file = fixture('export function render(){\nreturn "done"\n}\n');
-  const format = (...args) =>
+  const format = (...args: string[]) =>
     Bun.spawnSync([process.execPath, 'node_modules/oxfmt/bin/oxfmt', ...args, file]);
   assert.notEqual(format('--check').exitCode, 0);
   assert.equal(format('--write').exitCode, 0);

@@ -26,7 +26,7 @@ function fixture() {
   onTestFinished(() => rmSync(root, { recursive: true, force: true }));
   return root;
 }
-function write(root, file, text) {
+function write(root: string, file: string, text: string) {
   const output = path.join(root, file);
   mkdirSync(path.dirname(output), { recursive: true });
   writeFileSync(output, text);
@@ -37,7 +37,7 @@ function publishedFixture() {
   cpSync('LICENSE', path.join(root, 'LICENSE'));
   return root;
 }
-function git(root, ...args) {
+function git(root: string, ...args: string[]) {
   const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
   return result.stdout;
@@ -174,6 +174,7 @@ test('review findings require an existing source path and valid line', () => {
     diff: '',
     files: { 'src/main.ts': 'value\n' },
     excluded: [],
+    deleted: [],
   };
   const finding = {
     severity: 'medium',
@@ -202,7 +203,13 @@ test('review findings require an existing source path and valid line', () => {
 
 test('review requires every mandatory file to exist and be read, and rejects native tools', () => {
   const required = ['AGENTS.md', 'package.json', 'skills/skill-anatomy/SKILL.md', 'src/cli.ts'];
-  const snapshot = { files: Object.fromEntries(required.map((file) => [file, 'evidence'])) };
+  const snapshot = {
+    commit: 'fixture',
+    diff: '',
+    excluded: [],
+    deleted: [],
+    files: Object.fromEntries(required.map((file) => [file, 'evidence'])),
+  };
   const events = required
     .map((file) =>
       JSON.stringify({
@@ -220,7 +227,7 @@ test('review requires every mandatory file to exist and be read, and rejects nat
     .join('\n');
   assert.equal(validateReviewEvents(events, snapshot).size, 4);
   assert.throws(() => validateReviewEvents('', snapshot), /evidence/);
-  const incomplete = { files: { ...snapshot.files } };
+  const incomplete = { ...snapshot, files: { ...snapshot.files } };
   delete incomplete.files['skills/skill-anatomy/SKILL.md'];
   assert.throws(() => validateReviewEvents(events, incomplete), /required evidence/);
   assert.throws(
@@ -256,7 +263,10 @@ test('the review MCP server serves only snapshot keys', () => {
     encoding: 'utf8',
   });
   assert.equal(result.status, 0, result.stderr);
-  const replies = result.stdout.trim().split('\n').map(JSON.parse);
+  const replies = result.stdout
+    .trim()
+    .split('\n')
+    .map((line) => JSON.parse(line));
   assert.match(replies[1].result.content[0].text, /public text/);
   assert.ok(replies[2].error);
   assert.ok(replies[3].error);

@@ -1,4 +1,4 @@
-import { nodeExecutable } from './runtime.mjs';
+import { nodeExecutable } from './runtime.ts';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import {

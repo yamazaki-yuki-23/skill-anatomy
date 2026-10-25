@@ -8,6 +8,8 @@ bun run verify
 
 開発にはBun 1.3.8以上、Node.js 22以上、Gitを使う。初回は`bun install --frozen-lockfile --ignore-scripts`で依存を導入する。利用者にBunは必要ない。
 
+テストは`tests/*.test.ts`、共有ヘルパーは`tests/runtime.ts`に置く。`bun run check`は本体・開発スクリプト・テストを同じstrict設定で型検査し、`bun run test`はVitestをBun上で実行する。配布物の動作はNode.jsを使うテストで確認する。
+
 ## 変更から検証まで
 
 1. 依頼の目的と、完了を判断できる条件を決める。関連する実装・スキル・既存テストを読む。
