@@ -72,7 +72,7 @@ Reports are saved under `reports/` in the first applicable location:
 2. The root of the Skill anatomy Git clone, when using the skill from that clone.
 3. Otherwise, the directory where you run the analysis.
 
-For example, using a clone at `skill-anatomy/` from another directory saves reports to `skill-anatomy/reports/` unless the variable is set. Run installed copies from outside the skill directory. Their reports remain separate and survive skill updates.
+For example, using a clone at `skill-anatomy/` from another directory saves reports to `skill-anatomy/reports/` unless the variable is set. Run installed copies from outside the skill directory. With the default location, their reports remain separate and survive skill updates.
 
 ```text
 reports/<owner>/<repository>/
