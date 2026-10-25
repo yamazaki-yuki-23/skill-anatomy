@@ -66,7 +66,13 @@ Explanations cite their sources and distinguish the author's statements from the
 
 ## Saved files
 
-Reports are saved under `reports/` in the directory where you run the analysis. They are stored separately from the installed skill and survive updates.
+Reports are saved under `reports/` in the first applicable location:
+
+1. The directory set in `SKILL_ANATOMY_WORKSPACE`.
+2. The root of the Skill anatomy Git clone, when using the skill from that clone.
+3. Otherwise, the directory where you run the analysis.
+
+For example, using a clone at `skill-anatomy/` from another directory saves reports to `skill-anatomy/reports/` unless the variable is set. Run installed copies from outside the skill directory. Their reports remain separate and survive skill updates.
 
 ```text
 reports/<owner>/<repository>/
