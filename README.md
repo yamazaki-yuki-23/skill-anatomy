@@ -75,7 +75,7 @@ reports/<owner>/<repository>/
 └── .state.json                 # Record used to resume research
 ```
 
-The repository report covers the skill list and shared design ideas. Each skill's report explains its mechanism, history, and applications. Links in the repository report lead to those reports. If you select one skill, the repository report covers only the researched scope.
+The repository report covers the skill list and shared design ideas. Each skill's report explains its mechanism, history, and applications. Links in the repository report lead to those reports. For a single skill, the repository report is a short guide to the researched scope and individual report; it does not repeat the detailed examples.
 
 Each report type uses consistent headings in a fixed order, so you can find usage, history, design, and applications in the same place when comparing skills.
 

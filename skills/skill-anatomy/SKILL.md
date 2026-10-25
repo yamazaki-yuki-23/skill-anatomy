@@ -19,10 +19,10 @@ Node.js 22以上とGitを使う。PR・Issueの取得には認証済みGitHub CL
 1. `prepare URL` を実行する。リポジトリ・個別スキル・フォルダを自動判別する。`--no-confirm` と `--refresh` は利用者が指定した場合だけ渡す。返された `plan_file` をPLANとし、対象・件数・更新対象・調査範囲・`destination`・取得できなかった情報・重点を提示する。本文の分析やレポート更新はまだ始めない。
 2. `--no-confirm` がなければ開始してよいか1回尋ね、OKを待って `approve PLAN` を実行する。確認省略時も方針は表示し、方針や対象を変えたら再承認を受ける。ツールの権限確認は省略しない。
 3. [調査手順](references/research.md)を読み、PLANの固定コミットから根拠を調べる。呼び出し先まで処理をたどり、重要な設計判断を変更前後と理由から理解する。
-4. [執筆・完成基準](references/report-format.md)に従い、PLANの `pending` を1件ずつ日本語Markdownで `report` へ保存する。基準を満たした後に `complete PLAN --skill '元のSKILL.mdのパス'` を実行し、読んだ共有ファイルは `--dependency PATH` を繰り返して登録する。1件ごとに完了件数を伝える。未完了なら続け、中断時はPLANと残件を示す。
+4. [執筆・完成基準](references/report-format.md)に従い、`prepare` の返却値の `pending` にあるスキルを1件ずつ分析する。PLANの `skills` から対応する `skill` と `report` を参照し、日本語Markdownを保存する。基準を満たした後に `complete PLAN --skill '元のSKILL.mdのパス'` を実行し、読んだ共有ファイルは `--dependency PATH` を繰り返して登録する。完了応答の `done` / `total` で件数を伝える。未完了なら続け、中断時はPLANと残件を示す。
 5. 同じ執筆基準で `repository-analysis.md` を更新し、スキル一覧と個別分析へのリンクを載せる。途中は未分析範囲を示し、共通する設計と学びは全件完了後にまとめる。完成後に `complete PLAN --repository` を実行する。
 
-同じURLの `prepare` で再開できる。変更なしのレポートは調査日・コミットを保ち、削除されたスキルの過去レポートは残す。同じ保存先で分析を並行して進めない。
+PLANの `skills[].selected` と `status` は準備時点の対象と状態で、PLANに `pending` 配列はない。`complete` 後もこの一覧は更新されないため、作業中の残件はPLANの `state_file` が指す状態ファイルの `skills` と選択対象を照合する。同じURLの `prepare` で再開すれば、新しいPLANと返却値の `pending` で残件を確認できる。変更なしのレポートは調査日・コミットを保ち、削除されたスキルの過去レポートは残す。同じ保存先で分析を並行して進めない。
 
 ## 調査の境界
 

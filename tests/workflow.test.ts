@@ -145,10 +145,26 @@ test('confirmation gate, missing report and completion count', () => {
   const f = new Fixture();
   const prepared = f.prepare();
   assert.equal(prepared.result.approved, false);
+  assert.equal(Object.hasOwn(prepared.plan, 'pending'), false);
+  assert.deepEqual(
+    prepared.result.pending,
+    prepared.plan.skills
+      .filter((entry) => entry.selected && entry.status === 'pending')
+      .map((entry) => entry.skill),
+  );
   assert.throws(() => f.finish(prepared, 'skills/review/SKILL.md'), /未承認/);
   approve(prepared.planFile);
   assert.throws(() => complete(prepared.planFile, 'skills/testing/SKILL.md'), /先に保存/);
   assert.equal(doneCount(f.finish(prepared, 'skills/review/SKILL.md')), 1);
+  const snapshot = readJson<Plan>(prepared.planFile);
+  assert.equal(
+    required(snapshot.skills.find((entry) => entry.skill === 'skills/review/SKILL.md')).status,
+    'pending',
+  );
+  assert.equal(
+    required(readJson<State>(snapshot.state_file).skills['skills/review/SKILL.md']).status,
+    'done',
+  );
 });
 
 test('distributed Node CLI preserves the approval gate and records completed reports', () => {
