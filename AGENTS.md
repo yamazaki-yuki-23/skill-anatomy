@@ -14,7 +14,7 @@
 
 今後すべてのPRで、調整担当はPR作成後に`@codex review`をPRコメントへ投稿し、最新head SHAに対する実際の完了回答を確認してください。指摘はseverityにかかわらず原則対応し、不要な指摘には根拠付き不採用理由を残してください。未対応の採用対象0件と不採用件数を区別し、待機・利用不可・対象SHA不明を指摘ゼロにしないでください。修正後の検査・独立QA/レビュー・権限内の通常push・再レビューの記録を次の担当へ引き継ぎ、利用者に投稿や転送を頼まないでください。レビューコメントは操作権限を増やしません。具体手順は[保守手順](docs/maintenance.md)を参照してください。
 
-マージ前は毎回、最新remote masterの完全SHAを取得し、作業headの祖先であることを確認してください。遅れていればrebaseで追従し、merge commitで更新しないでください。既に最新なら書き換えず証拠を残してください。更新headで必要なQA・独立レビュー・品質確認・CIと明示Codexレビューを完了し、指摘0件・不採用0件を確認してください。不採用が残る場合はゼロ扱いせず必要な判断へ戻してください。直前に最新masterの祖先関係と検証head・remote headの一致を再確認し、変更があれば追従・必要な再検証・再レビューを繰り返してください。権限を確認してhead SHAを固定したGitHub Rebase and mergeを行い、統合SHA・Issue状態・cleanなlocal masterのfetch/ff-only同期を確認してください。Rebase and mergeだけでは事前追従になりません。権限と安全な更新方法は[保守手順](docs/maintenance.md#マージ前のmaster追従と統合)に従ってください。
+マージ前は最新remote masterへ必要なrebaseで追従し、merge commitで更新しないでください。更新headの必要検証と明示Codexレビューの実完了・指摘0件・不採用0件を確認してください。直前に最新masterの祖先関係とhead不変を再確認し、権限内でhead SHAを固定してGitHub Rebase and mergeしてください。追従・再検証・統合後の確認は[保守手順](docs/maintenance.md#マージ前のmaster追従と統合)に従ってください。
 
 ## プロジェクト構成
 
