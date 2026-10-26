@@ -411,3 +411,123 @@ test('prepare results and earlier trace entries remain snapshots through complet
   assert.equal(JSON.stringify(initial), initialJson);
   assert.equal(JSON.stringify(f.trace[0]), firstTrace);
 });
+
+test('fixed root diff-tree returns applicable additions for the approved source files', () => {
+  const f = new ResearchFixture(required(cases[0]));
+  const paths = ['skills/review-brief/SKILL.md', 'references/checklist.md'];
+  const patch = f.call('run_command', {
+    program: 'git',
+    args: [
+      '--literal-pathspecs',
+      '--git-dir',
+      '/cache/repo.git',
+      'diff-tree',
+      '--root',
+      '--no-commit-id',
+      '-p',
+      commit,
+      '--',
+      ...paths,
+    ],
+  });
+  assert.ok(typeof patch === 'string');
+  assert.equal(
+    f.call('run_command', {
+      program: 'git',
+      args: [
+        '--literal-pathspecs',
+        '--git-dir=/cache/repo.git',
+        'diff-tree',
+        '-p',
+        '--root',
+        '--no-commit-id',
+        commit,
+        '--',
+        ...paths,
+      ],
+    }),
+    patch,
+  );
+  const temporary = mkdtempSync(path.join(tmpdir(), 'anatomy-root-diff-'));
+  onTestFinished(() => rmSync(temporary, { recursive: true, force: true }));
+  const result = spawnSync('git', ['apply', '-'], {
+    cwd: temporary,
+    input: patch,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      GIT_CONFIG_NOSYSTEM: '1',
+      GIT_CONFIG_GLOBAL: '/dev/null',
+      GIT_ATTR_NOSYSTEM: '1',
+      HOME: temporary,
+    },
+  });
+  assert.equal(result.status, 0, result.stderr);
+  for (const file of paths) {
+    const source = f.call('read_file', { path: `/cache/source/${file}` });
+    assert.equal(readFileSync(path.join(temporary, file), 'utf8'), source);
+  }
+  assert.deepEqual(f.summary().violations, []);
+});
+
+test('root diff-tree rejects external processing, writes, extra objects and nonliteral scope', () => {
+  const options = ['--root', '--no-commit-id', '-p'];
+  const skill = 'skills/review-brief/SKILL.md';
+  const valid = [...options, commit, '--', skill];
+  const unsafe = [
+    ['--ext-diff', ...valid],
+    ['--textconv', ...valid],
+    ['--output=/workspace/AGENTS.md', ...valid],
+    [...options, commit, '--output=/workspace/AGENTS.md', '--', skill],
+    [...valid, '--output=/workspace/AGENTS.md'],
+    ['--output', '/workspace/AGENTS.md', ...valid],
+    ['-c', 'diff.external=sh', ...valid],
+    ['--config-env=diff.external=COMMAND', ...valid],
+    ['--stdin', ...valid],
+    [...options, '-', '--', skill],
+    [...options, 'f'.repeat(40), '--', skill],
+    [...options, commit + '^', '--', skill],
+    [...options, `${commit}:README.md`, '--', skill],
+    [...options, commit, commit, '--', skill],
+    [...options, commit, '--'],
+    [...options, commit, skill],
+    ['--root', '--root', '-p', commit, '--', skill],
+    ['--root', '-p', commit, '--', skill],
+    [...options, commit, '--', '../secret'],
+    [...options, commit, '--', '/etc/passwd'],
+    [...options, commit, '--', ':(top)README.md'],
+    [...options, commit, '--', 'references/../README.md'],
+    [...options, commit, '--', 'skills/review-brief'],
+    [...options, commit, '--', skill, skill],
+  ];
+  for (const args of unsafe) {
+    const f = new ResearchFixture(required(cases[0]));
+    const response = f.call('run_command', {
+      program: 'git',
+      args: ['--literal-pathspecs', '--git-dir', '/cache/repo.git', 'diff-tree', ...args],
+    });
+    assert.deepEqual(
+      response,
+      { error: 'Unapproved Git diff-tree argument' },
+      JSON.stringify(args),
+    );
+    assert.equal(f.summary().violations.length, 1);
+  }
+  for (const args of [
+    ['--git-dir', '/cache/repo.git', 'diff-tree', ...valid],
+    ['--literal-pathspecs', '--git-dir', '/unapproved/repo.git', 'diff-tree', ...valid],
+    [
+      '--literal-pathspecs',
+      '-c',
+      'diff.external=sh',
+      '--git-dir',
+      '/cache/repo.git',
+      'diff-tree',
+      ...valid,
+    ],
+  ]) {
+    const f = new ResearchFixture(required(cases[0]));
+    f.call('run_command', { program: 'git', args });
+    assert.equal(f.summary().violations.length, 1);
+  }
+});
