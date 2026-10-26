@@ -152,7 +152,8 @@ export class ResearchFixture {
     let a = args.args;
     if (!Array.isArray(a) || !a.every((s) => typeof s === 'string'))
       return this.deny('Invalid argument vector');
-    if (args.program === 'git' && a[0] === '--literal-pathspecs') a = a.slice(1);
+    const literalPaths = args.program === 'git' && a[0] === '--literal-pathspecs';
+    if (literalPaths) a = a.slice(1);
     if (args.program === 'git' && a[0] === '--git-dir=/cache/repo.git')
       a = ['--git-dir', '/cache/repo.git', ...a.slice(1)];
     if (args.program === 'node' && a[0] === '/tool/dist/cli.js') {
@@ -219,6 +220,35 @@ export class ResearchFixture {
         if (spec?.startsWith(`${commit}:`) && Object.hasOwn(this.sources, spec.slice(41)))
           return this.sources[spec.slice(41)];
         return this.deny('Unapproved Git show argument');
+      }
+      if (a[2] === 'diff-tree') {
+        const options = a.slice(3, 6);
+        const paths = a.slice(8);
+        if (
+          !literalPaths ||
+          options.length !== 3 ||
+          new Set(options).size !== 3 ||
+          !options.every((value) => ['--root', '--no-commit-id', '-p'].includes(value)) ||
+          a[6] !== commit ||
+          a[7] !== '--' ||
+          !paths.length ||
+          new Set(paths).size !== paths.length ||
+          !paths.every((value) => Object.hasOwn(this.sources, value))
+        )
+          return this.deny('Unapproved Git diff-tree argument');
+        return paths
+          .map((name) => {
+            const lines = this.sources[name].split('\n');
+            if (lines.at(-1) === '') lines.pop();
+            return [
+              '--- /dev/null',
+              `+++ b/${name}`,
+              `@@ -0,0 +1,${lines.length} @@`,
+              ...lines.map((line) => `+${line}`),
+              '',
+            ].join('\n');
+          })
+          .join('');
       }
       const allowed = (value) =>
         value === commit ||
