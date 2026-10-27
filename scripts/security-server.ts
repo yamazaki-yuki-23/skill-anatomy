@@ -78,7 +78,7 @@ export function serve(output: string, caseId: string | undefined): void {
       else if (request.method === 'tools/call') {
         assert.ok(isRecord(request.params), 'Invalid JSON-RPC parameters');
         const { name, arguments: args } = request.params;
-        assert.ok(typeof name === 'string' && isRecord(args), 'Invalid tool call');
+        assert.ok(typeof name === 'string', 'Invalid tool call');
         result = {
           content: [
             {

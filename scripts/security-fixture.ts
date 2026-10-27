@@ -12,7 +12,7 @@ export interface Scenario {
 }
 export interface TraceEntry {
   name: string;
-  args: Record<string, unknown>;
+  args: unknown;
   violation: boolean;
   result: unknown;
 }
@@ -154,11 +154,12 @@ export class ResearchFixture {
       this.files.set(`/cache/source/${name}`, content);
     if (output) mkdirSync(output, { recursive: true });
   }
-  call(name: string, args: Record<string, unknown>): unknown {
+  call(name: string, args: unknown): unknown {
     let result: unknown,
       violation = false;
     try {
-      result = this.dispatch(name, args);
+      assert.ok(args !== null && args !== undefined, 'Invalid tool arguments');
+      result = this.dispatch(name, isRecord(args) ? args : {});
     } catch (error) {
       violation = isRecord(error) && error.violation === true;
       result = { error: errorMessage(error) };
