@@ -249,10 +249,11 @@ test('GitHub index changes and acquisition failures trigger research', () => {
   f.finishAll();
   f.index = { status: 'available', items: [{ number: 1, updated_at: '2026-10-19T00:00:00Z' }] };
   assert.equal(f.prepare().result.pending.length, 3);
+  f.finishAll();
   f.index = { status: 'unavailable', items: [], error: 'rate limited' };
   const { result } = f.prepare();
   assert.equal(result.index_status, 'unavailable');
-  assert.equal(result.warning, 'rate limited');
+  assert.match(result.warning ?? '', /rate limited/);
   assert.equal(result.pending.length, 3);
 });
 
@@ -283,6 +284,32 @@ test('individual analysis preserves other reports and inventory', () => {
   assert.deepEqual(prepared.result.pending, []);
   assert.equal(readFileSync(report, 'utf8'), before);
   assert.equal(prepared.plan.skills.length, 3);
+});
+
+test('unchanged unavailable indexes resume completed reports and still detect source changes', () => {
+  const f = new Fixture();
+  f.index = { status: 'unavailable', items: [], error: 'gh missing' };
+  f.finishAll();
+  f.index.error = 'authentication unavailable';
+  const resumed = f.prepare();
+  assert.deepEqual(resumed.result.pending, []);
+  assert.equal(resumed.result.index_status, 'unavailable');
+  assert.match(resumed.result.warning ?? '', /索引.*取得できない/);
+  f.write('skills/review/SKILL.md', '# Changed review\n');
+  f.commit('Change offline source');
+  assert.deepEqual(f.prepare().result.pending, ['skills/review/SKILL.md']);
+  assert.equal(f.prepare('', false, true).result.pending.length, 3);
+});
+
+test('restored GitHub index triggers research after offline completion', () => {
+  const f = new Fixture();
+  f.index = { status: 'unavailable', items: [] };
+  f.finishAll();
+  assert.deepEqual(f.prepare().result.pending, []);
+  f.index = { status: 'available', items: [] };
+  const result = f.prepare().result;
+  assert.equal(result.pending.length, 3);
+  assert.equal(result.warning, null);
 });
 
 test('individual forced refresh preserves completed skills outside the selection', () => {
