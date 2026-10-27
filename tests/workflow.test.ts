@@ -2,6 +2,7 @@ import { nodeExecutable, required } from './runtime.ts';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -21,7 +22,7 @@ import { canonicalJson, digest } from '../src/fingerprint.ts';
 import { discover, reportPaths } from '../src/skills.ts';
 import { inside, readJson, withStateLock } from '../src/storage.ts';
 import { parseUrl, resolveTarget } from '../src/repository.ts';
-import { prepareSnapshot } from '../src/anatomy.ts';
+import { prepareSnapshot, pruneSupersededPlans } from '../src/anatomy.ts';
 
 import type { Plan, State, GithubIndex, Files } from '../src/types.js';
 
@@ -262,9 +263,84 @@ test('stale plans cannot approve or complete', () => {
   const f = new Fixture();
   const old = f.prepare('', true);
   f.prepare();
-  assert.throws(() => approve(old.planFile), /古いPLAN/);
-  assert.throws(() => f.finish(old, 'skills/review/SKILL.md'), /古いPLAN/);
+  assert.throws(() => approve(old.planFile), /古いPLAN|PLANが見つかりません/);
+  assert.throws(() => f.finish(old, 'skills/review/SKILL.md'), /古いPLAN|PLANが見つかりません/);
 });
+
+test('successful preparation prunes only superseded plans for the same repository', () => {
+  const f = new Fixture();
+  const previous = f.prepare('', true);
+  f.finish(previous, 'skills/review/SKILL.md');
+  assert.ok(existsSync(previous.planFile));
+  const current = f.prepare('', true);
+  assert.ok(!existsSync(path.dirname(previous.planFile)));
+  assert.ok(existsSync(current.planFile));
+  assert.ok(existsSync(current.plan.github_index));
+  assert.deepEqual(current.result.pending, ['skills/testing/SKILL.md', 'skills/writing/SKILL.md']);
+  assert.doesNotThrow(() => f.finish(current, 'skills/testing/SKILL.md'));
+  const other = prepareSnapshot(
+    { url: 'https://github.com/Alice/Other', workspace: f.root },
+    parseUrl('https://github.com/Alice/Other'),
+    f.root,
+    path.join(f.source, '.git'),
+    'refs/heads/main',
+    f.index,
+  );
+  assert.ok(typeof other.plan_file === 'string');
+  f.prepare();
+  assert.ok(existsSync(other.plan_file));
+});
+
+test('plan cleanup preserves unrecognized contents and plans after preparation fails', () => {
+  const f = new Fixture();
+  const previous = f.prepare('', true);
+  writeFileSync(path.join(path.dirname(previous.planFile), 'notes.md'), 'Preserve this note\n');
+  f.prepare();
+  assert.ok(existsSync(previous.planFile));
+  const active = f.prepare('', true);
+  assert.throws(() => f.prepare('/blob/main/README.md'));
+  assert.ok(existsSync(active.planFile));
+  assert.doesNotThrow(() => f.finish(active, 'skills/review/SKILL.md'));
+});
+
+test(
+  'an unreadable plan root warns without losing the new active plan',
+  { skip: process.platform === 'win32' || process.getuid?.() === 0 },
+  () => {
+    const f = new Fixture();
+    const current = f.prepare('', true);
+    const planRoot = path.dirname(path.dirname(current.planFile));
+    chmodSync(planRoot, 0o300);
+    try {
+      const warnings = pruneSupersededPlans(planRoot, current.plan);
+      assert.match(warnings.join(' '), /古い計画を整理できません/);
+      assert.ok(existsSync(current.planFile));
+      assert.doesNotThrow(() => f.finish(current, 'skills/review/SKILL.md'));
+    } finally {
+      chmodSync(planRoot, 0o700);
+    }
+  },
+);
+
+test(
+  'plan cleanup keeps malformed metadata and linked files',
+  { skip: process.platform === 'win32' },
+  () => {
+    const f = new Fixture();
+    const malformed = f.prepare('', true);
+    writeFileSync(malformed.planFile, '{invalid json');
+    const linked = f.prepare('', true);
+    assert.ok(existsSync(malformed.planFile));
+    assert.match(linked.result.warning ?? '', /古い計画を整理できません/);
+    const outside = path.join(f.base, 'keep-index.json');
+    writeFileSync(outside, 'Keep this index\n');
+    unlinkSync(linked.plan.github_index);
+    symlinkSync(outside, linked.plan.github_index);
+    f.prepare();
+    assert.ok(existsSync(linked.planFile));
+    assert.equal(readFileSync(outside, 'utf8'), 'Keep this index\n');
+  },
+);
 
 test('separate CLI processes reject a repository state locked by another process', () => {
   const f = new Fixture();

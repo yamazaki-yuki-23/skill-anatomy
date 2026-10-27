@@ -1,4 +1,14 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync } from 'node:fs';
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmdirSync,
+  unlinkSync,
+} from 'node:fs';
 import path from 'node:path';
 import { digest, sorted, createSourceSigner } from './fingerprint.js';
 import { acquire, parseUrl, resolveTarget, fileInventory, fetchIndex } from './repository.js';
@@ -141,6 +151,7 @@ function prepareSnapshotUnlocked(
   writeJson(indexFile, index);
   writeJson(planFile, plan);
   writeJson(stateFile, state);
+  const cleanupWarnings = pruneSupersededPlans(planRoot, plan);
   return {
     plan_file: planFile,
     commit,
@@ -151,9 +162,61 @@ function prepareSnapshotUnlocked(
     approved: plan.approved,
     index_status: index.status,
     warning:
-      index.status === 'unavailable'
-        ? `GitHub索引を取得できないため、PR・Issueの更新は未確認です。${index.error ? ` ${index.error}` : ''}`
-        : null,
+      [
+        index.status === 'unavailable'
+          ? `GitHub索引を取得できないため、PR・Issueの更新は未確認です。${index.error ? ` ${index.error}` : ''}`
+          : null,
+        ...cleanupWarnings,
+      ]
+        .filter(Boolean)
+        .join(' ') || null,
     destination,
   };
+}
+
+export function pruneSupersededPlans(planRoot: string, active: Plan): string[] {
+  try {
+    return pruneKnownPlans(planRoot, active);
+  } catch (error) {
+    return [`古い計画を整理できませんでした: ${(error as Error).message}`];
+  }
+}
+
+function pruneKnownPlans(planRoot: string, active: Plan): string[] {
+  const warnings: string[] = [];
+  for (const entry of readdirSync(planRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory() || !entry.name.startsWith('run-') || entry.name === active.id)
+      continue;
+    const directory = path.join(planRoot, entry.name);
+    const planFile = path.join(directory, 'plan.json');
+    const indexFile = path.join(directory, 'github-index.json');
+    try {
+      const files = readdirSync(directory);
+      if (
+        files.length !== 2 ||
+        !files.includes('plan.json') ||
+        !files.includes('github-index.json')
+      )
+        continue;
+      if (![planFile, indexFile].every((file) => lstatSync(file).isFile())) continue;
+      const previous = readJson<Plan>(planFile);
+      if (
+        !previous ||
+        previous.version !== VERSION ||
+        previous.owner !== active.owner ||
+        previous.repo !== active.repo ||
+        previous.state_file !== active.state_file ||
+        previous.id !== entry.name ||
+        previous.plan_file !== planFile ||
+        previous.github_index !== indexFile
+      )
+        continue;
+      unlinkSync(indexFile);
+      unlinkSync(planFile);
+      rmdirSync(directory);
+    } catch (error) {
+      warnings.push(`古い計画を整理できませんでした: ${entry.name}。${(error as Error).message}`);
+    }
+  }
+  return warnings;
 }
