@@ -19,7 +19,7 @@ import { approve, complete } from '../src/state.ts';
 import { canonicalJson, digest } from '../src/fingerprint.ts';
 import { discover, reportPaths } from '../src/skills.ts';
 import { inside, readJson } from '../src/storage.ts';
-import { parseUrl } from '../src/repository.ts';
+import { parseUrl, resolveTarget } from '../src/repository.ts';
 import { prepareSnapshot } from '../src/anatomy.ts';
 
 import type { Plan, State, GithubIndex, Files } from '../src/types.js';
@@ -531,4 +531,118 @@ test.each([
   finish();
   changeAndRestore(scenario.unrelated);
   assert.deepEqual(f.prepare().result.pending.sort(), [...scenario.unrelatedPending].sort());
+});
+
+test('full commit URL resolution avoids absent named-ref probes', () => {
+  const f = new Fixture();
+  const commit = f.git('rev-parse', 'HEAD');
+  const trace = path.join(f.base, 'git-trace.log');
+  const previous = process.env.GIT_TRACE;
+  let resolved;
+  try {
+    process.env.GIT_TRACE = trace;
+    resolved = resolveTarget(path.join(f.source, '.git'), 'refs/heads/main', [
+      'blob',
+      commit,
+      'skills',
+      'review',
+      'SKILL.md',
+    ]);
+  } finally {
+    if (previous === undefined) delete process.env.GIT_TRACE;
+    else process.env.GIT_TRACE = previous;
+  }
+  assert.deepEqual(resolved, { commit, target: 'skills/review/SKILL.md', kind: 'blob' });
+  const calls = readFileSync(trace, 'utf8')
+    .split('\n')
+    .filter((line) => line.includes('built-in: git') && line.includes(' rev-parse '));
+  assert.equal(calls.length, 2, calls.join('\n'));
+});
+
+test('full SHA shortcuts preserve branch, tag, slash, symbolic and DWIM shadowing', () => {
+  for (const shadow of ['branch', 'tag', 'slash', 'symbolic', 'dwim']) {
+    const f = new Fixture();
+    const original = f.git('rev-parse', 'HEAD');
+    f.write('README.md', '# Newer fixture\n');
+    f.commit('Add newer commit');
+    const newer = f.git('rev-parse', 'HEAD');
+    if (shadow === 'branch') {
+      f.git('branch', original, newer);
+      f.git('tag', original, original);
+    }
+    if (shadow === 'tag') f.git('tag', '-a', original, newer, '-m', 'Annotated shadow');
+    if (shadow === 'slash') f.git('branch', `${original}/skills`, newer);
+    if (shadow === 'symbolic') f.git('symbolic-ref', `refs/heads/${original}`, 'refs/heads/main');
+    if (shadow === 'dwim') f.git('branch', `refs/heads/${original}`, newer);
+    assert.deepEqual(
+      resolveTarget(path.join(f.source, '.git'), 'refs/heads/main', [
+        'blob',
+        original,
+        'skills',
+        'review',
+        'SKILL.md',
+      ]),
+      {
+        commit: newer,
+        target: shadow === 'slash' ? 'review/SKILL.md' : 'skills/review/SKILL.md',
+        kind: 'blob',
+      },
+      shadow,
+    );
+  }
+});
+
+test('commit resolution keeps short SHA and revision paths, rejects invalid objects and noncommit tags', () => {
+  const f = new Fixture();
+  const original = f.git('rev-parse', 'HEAD');
+  f.write('README.md', '# Newer fixture\n');
+  f.commit('Add newer commit');
+  const cache = path.join(f.source, '.git');
+  for (const ref of [original.slice(0, 7), 'main~1']) {
+    assert.deepEqual(
+      resolveTarget(cache, 'refs/heads/main', ['blob', ref, 'skills', 'review', 'SKILL.md']),
+      { commit: original, target: 'skills/review/SKILL.md', kind: 'blob' },
+    );
+  }
+  const blob = f.git('rev-parse', 'HEAD:README.md');
+  f.git('tag', original, blob);
+  assert.equal(
+    resolveTarget(cache, 'refs/heads/main', ['blob', original, 'skills', 'review', 'SKILL.md'])
+      .commit,
+    original,
+  );
+  for (const ref of ['f'.repeat(40), blob, 'missing-branch'])
+    assert.throws(
+      () => resolveTarget(cache, 'refs/heads/main', ['blob', ref, 'skills', 'review', 'SKILL.md']),
+      /URLのブランチ・タグ・コミットを解決できません/,
+    );
+});
+
+test('failed local ref inventory falls back without accepting an invalid repository', () => {
+  const f = new Fixture();
+  const commit = f.git('rev-parse', 'HEAD');
+  writeFileSync(path.join(f.source, '.git', 'packed-refs'), 'invalid packed refs\n');
+  const trace = path.join(f.base, 'failed-git-trace.log');
+  const previous = process.env.GIT_TRACE;
+  try {
+    process.env.GIT_TRACE = trace;
+    assert.throws(
+      () =>
+        resolveTarget(path.join(f.source, '.git'), 'refs/heads/main', [
+          'blob',
+          commit,
+          'skills',
+          'review',
+          'SKILL.md',
+        ]),
+      /URLのブランチ・タグ・コミットを解決できません/,
+    );
+  } finally {
+    if (previous === undefined) delete process.env.GIT_TRACE;
+    else process.env.GIT_TRACE = previous;
+  }
+  const calls = readFileSync(trace, 'utf8')
+    .split('\n')
+    .filter((line) => line.includes('built-in: git') && line.includes(' rev-parse '));
+  assert.equal(calls.length, 10, calls.join('\n'));
 });
