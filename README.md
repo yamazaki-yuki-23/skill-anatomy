@@ -111,6 +111,16 @@ When calling the CLI directly, use `prepare URL --workspace "/path/to/analysis"`
 
 Skills with the same name are distinguished by their original paths. Reports for deleted skills are retained. You can track reports and `.state.json` together in Git. Do not research the same repository concurrently in the same output location.
 
+`prepare`, `approve`, and `complete` stop with a `.state.json.lock` error if another process is updating the same repository state. Locks cover each CLI command, including repository acquisition during `prepare`; they do not cover agents writing report content. Different repositories use separate locks.
+
+If a lock remains after an abnormal exit, recover it as follows:
+
+1. Read the lock file named in the error and check its `hostname`, `pid`, and `created_at`. Stop commands for that repository on every machine sharing the output location. A PID alone does not identify the owner because operating systems reuse PIDs.
+2. Only after confirming that no process is using it, including on the recorded host, preserve the lock by renaming it to an unused name in your file manager, such as `.state.json.lock.recovered-20261028-090000`. Leave it unchanged if execution status is unknown.
+3. Run the command again. If it reports a lock again, check for another run. Keep `.state.json` and PLAN files.
+
+Locks are released on normal completion and exceptions. There is no automatic recovery based on age or PID, and no recovery waiting period.
+
 Some updates, such as changes limited to PR reviews, may go undetected. Use `--refresh` when you want to research them again.
 
 </details>

@@ -6,6 +6,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  renameSync,
   rmSync,
   symlinkSync,
   unlinkSync,
@@ -13,12 +14,12 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { test, onTestFinished } from 'vitest';
 import { approve, complete } from '../src/state.ts';
 import { canonicalJson, digest } from '../src/fingerprint.ts';
 import { discover, reportPaths } from '../src/skills.ts';
-import { inside, readJson } from '../src/storage.ts';
+import { inside, readJson, withStateLock } from '../src/storage.ts';
 import { parseUrl, resolveTarget } from '../src/repository.ts';
 import { prepareSnapshot } from '../src/anatomy.ts';
 
@@ -264,6 +265,76 @@ test('stale plans cannot approve or complete', () => {
   assert.throws(() => approve(old.planFile), /古いPLAN/);
   assert.throws(() => f.finish(old, 'skills/review/SKILL.md'), /古いPLAN/);
 });
+
+test('separate CLI processes reject a repository state locked by another process', () => {
+  const f = new Fixture();
+  const prepared = f.prepare('', true);
+  const before = readFileSync(prepared.plan.state_file, 'utf8');
+  withStateLock(prepared.plan.state_file, () => {
+    const commands = [
+      ['prepare', 'https://github.com/Alice/Agent-Skills', '--workspace', f.root],
+      ['approve', prepared.planFile],
+      ['complete', prepared.planFile, '--skill', 'skills/review/SKILL.md'],
+    ];
+    for (const args of commands) {
+      const result = spawnSync(nodeExecutable, [cli, ...args], {
+        encoding: 'utf8',
+        env: { ...process.env, PATH: '' },
+      });
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /状態ファイル.*ロック/);
+    }
+    assert.equal(readFileSync(prepared.plan.state_file, 'utf8'), before);
+    assert.throws(() => f.prepare(), /状態ファイル.*ロック/);
+  });
+  assert.equal(existsSync(`${prepared.plan.state_file}.lock`), false);
+  assert.doesNotThrow(() => approve(prepared.planFile));
+});
+
+test('state locks release after errors and stale locks require deliberate recovery', () => {
+  const f = new Fixture();
+  const prepared = f.prepare('', true);
+  const lockFile = `${prepared.plan.state_file}.lock`;
+  assert.throws(
+    () =>
+      withStateLock(prepared.plan.state_file, () => {
+        throw new Error('operation failed');
+      }),
+    /operation failed/,
+  );
+  assert.equal(existsSync(lockFile), false);
+  writeFileSync(lockFile, JSON.stringify({ pid: 999999999, hostname: 'stopped-host' }));
+  assert.throws(() => approve(prepared.planFile), /状態ファイル.*ロック/);
+  renameSync(lockFile, `${lockFile}.recovered`);
+  assert.doesNotThrow(() => approve(prepared.planFile));
+  assert.ok(existsSync(`${lockFile}.recovered`));
+});
+
+test(
+  'a killed owner leaves a lock that can be preserved and recovered',
+  { skip: process.platform === 'win32' },
+  () => {
+    const f = new Fixture();
+    const prepared = f.prepare('', true);
+    const storage = pathToFileURL(path.join(path.dirname(cli), 'storage.js')).href;
+    const result = spawnSync(
+      nodeExecutable,
+      [
+        '--input-type=module',
+        '-e',
+        `import { withStateLock } from ${JSON.stringify(storage)}; withStateLock(process.argv[1], () => process.kill(process.pid, 'SIGKILL'));`,
+        prepared.plan.state_file,
+      ],
+      { encoding: 'utf8' },
+    );
+    assert.equal(result.signal, 'SIGKILL', result.stderr);
+    const lockFile = `${prepared.plan.state_file}.lock`;
+    assert.ok(existsSync(lockFile));
+    assert.throws(() => approve(prepared.planFile), /状態ファイル.*ロック/);
+    renameSync(lockFile, `${lockFile}.recovered`);
+    assert.doesNotThrow(() => approve(prepared.planFile));
+  },
+);
 
 test('repository completion requires every selected report', () => {
   const f = new Fixture();

@@ -3,6 +3,7 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  fstatSync,
   lstatSync,
   mkdirSync,
   openSync,
@@ -12,7 +13,45 @@ import {
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
+import { hostname } from 'node:os';
 import path from 'node:path';
+export function withStateLock<T>(stateFile: string, operation: () => T): T {
+  const lockFile = `${stateFile}.lock`;
+  mkdirSync(path.dirname(stateFile), { recursive: true });
+  let descriptor: number;
+  try {
+    descriptor = openSync(lockFile, 'wx', 0o600);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'EEXIST')
+      throw new Error(
+        `状態ファイルがロックされています: ${lockFile}。使用中のプロセスを確認してください`,
+      );
+    throw error;
+  }
+  try {
+    writeFileSync(
+      descriptor,
+      `${JSON.stringify({ pid: process.pid, hostname: hostname(), created_at: new Date().toISOString() })}\n`,
+    );
+    fsyncSync(descriptor);
+    return operation();
+  } finally {
+    releaseStateLock(descriptor, lockFile);
+  }
+}
+function releaseStateLock(descriptor: number, lockFile: string): void {
+  try {
+    const held = fstatSync(descriptor);
+    try {
+      const current = lstatSync(lockFile);
+      if (held.dev === current.dev && held.ino === current.ino) unlinkSync(lockFile);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+  } finally {
+    closeSync(descriptor);
+  }
+}
 export function readJson<T>(filename: string): T {
   return JSON.parse(readFileSync(filename, 'utf8')) as T;
 }
