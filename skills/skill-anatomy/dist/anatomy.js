@@ -86,6 +86,12 @@ export function prepareSnapshot(options, target, root, cache, defaultRef, index)
     github_index: indexFile,
     index_status: index.status,
     index_hash: indexHash,
+    index_view: {
+      command: "index",
+      plan_file: planFile,
+      requires_approval: true,
+      raw_fallback: indexFile
+    },
     approved: !!options.noConfirm,
     confirmation: options.noConfirm ? "skipped-by-user" : "required",
     files,
@@ -106,6 +112,7 @@ export function prepareSnapshot(options, target, root, cache, defaultRef, index)
     pending: entries.filter((e) => e.selected && e.status === "pending").map((e) => e.skill),
     approved: plan.approved,
     index_status: index.status,
+    index_view: plan.index_view,
     warning: index.error ?? null,
     destination
   };

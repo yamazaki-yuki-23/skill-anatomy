@@ -57,6 +57,7 @@ function fixture(index: GithubIndex = { status: 'available', items: [] }, noConf
   const paths = [planFile, plan.github_index, plan.state_file];
   const snapshot = () => paths.map((filename) => readFileSync(filename).toString('hex'));
   return {
+    result,
     root,
     planFile,
     plan,
@@ -201,5 +202,58 @@ test('invalid numeric forms and extra CLI flags/arguments are rejected without m
   ]) {
     assert.notEqual(f.run(...args).status, 0, JSON.stringify(args));
   }
+  assert.deepEqual(f.snapshot(), before);
+});
+
+test('prepare exposes a trusted descriptor before approval without index payload, including no-confirm', () => {
+  const f = fixture(
+    { status: 'available', items: [{ ...entry(1), title: 'UNTRUSTED_PAYLOAD_MARKER' }] },
+    false,
+  );
+  const descriptor = f.plan.index_view;
+  assert.ok(descriptor);
+  assert.deepEqual(descriptor, {
+    command: 'index',
+    plan_file: f.planFile,
+    requires_approval: true,
+    raw_fallback: f.plan.github_index,
+  });
+  assert.deepEqual(f.result.index_view, descriptor);
+  assert.equal(JSON.stringify(f.result).includes('UNTRUSTED_PAYLOAD_MARKER'), false);
+  assert.equal(JSON.stringify(descriptor).includes('UNTRUSTED_PAYLOAD_MARKER'), false);
+  const invoke = () =>
+    spawnSync(nodeExecutable, [cli, descriptor.command, descriptor.plan_file], {
+      encoding: 'utf8',
+    });
+  const before = f.snapshot();
+  assert.notEqual(invoke().status, 0);
+  assert.deepEqual(f.snapshot(), before);
+  approve(f.planFile);
+  const approved = f.snapshot();
+  const response = invoke();
+  assert.equal(response.status, 0, response.stderr);
+  const view = JSON.parse(response.stdout);
+  assert.equal(view.index.items.length, 1);
+  assert.equal(view.index.items[0].title, 'UNTRUSTED_PAYLOAD_MARKER');
+  assert.deepEqual(view.index.items[0], {
+    ...entry(1),
+    title: 'UNTRUSTED_PAYLOAD_MARKER',
+    pull_request: { merged_at: null, future_selection: 'retained' },
+  });
+  assert.equal(view.snapshot.index_hash, f.plan.index_hash);
+  assert.deepEqual(f.snapshot(), approved);
+  const skipped = fixture();
+  assert.equal(skipped.plan.approved, true);
+  assert.equal(skipped.plan.index_view?.requires_approval, true);
+  assert.equal(skipped.run().status, 0);
+});
+
+test('older PLAN without a capability descriptor remains readable', () => {
+  const f = fixture({ status: 'available', items: [entry(1)] });
+  const { index_view: descriptor, ...older } = f.plan;
+  assert.ok(descriptor);
+  writeJson(f.planFile, older);
+  const before = f.snapshot();
+  assert.equal(f.run().status, 0);
   assert.deepEqual(f.snapshot(), before);
 });

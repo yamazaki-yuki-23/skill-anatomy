@@ -56,6 +56,12 @@ export interface Plan {
   'github_index': string;
   'index_status': string;
   'index_hash': string;
+  'index_view'?: {
+    command: 'index';
+    'plan_file': string;
+    'requires_approval': true;
+    'raw_fallback': string;
+  };
   approved: boolean;
   confirmation: string;
   files: Files;

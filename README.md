@@ -87,6 +87,8 @@ Each report type uses consistent headings in a fixed order, so you can find usag
 
 ## Resume or repeat research
 
+The prepare response and PLAN include an optional `index_view` descriptor with the trusted `command`, exact `plan_file`, `requires_approval` and original `raw_fallback` path. It contains no issue or PR text and does not run anything. The reader still requires persistent plan approval, including when `--no-confirm` records that approval. Older plans without the descriptor remain supported.
+
 After approving a plan, inspect its cached issue and pull request list with `node skills/skill-anatomy/dist/cli.js index PLAN`. Replace `PLAN` with the returned plan path. Add `--number 21` to retrieve every cached match for one number. The read-only view retains all entries and selection metadata while omitting repeated PR URLs. It returns the list under `index` and the fixed commit, raw index path and hashes under `snapshot`. It never fetches or changes data. An unavailable index or zero cached matches does not prove that a discussion doesn't exist; use the raw index and full source responses when needed.
 
 Pass the same URL again to research unfinished skills and those affected by changes. Changes to shared references or the pull request and issue list may trigger research of all skills.
