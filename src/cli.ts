@@ -9,7 +9,7 @@ const HELP = `GitHubスキルの分析準備・差分検出・完了記録
 
 使い方: node dist/cli.js <コマンド>
 
-  prepare URL [--no-confirm] [--refresh] [--tool-root PATH]
+  prepare URL [--no-confirm] [--refresh] [--workspace PATH]
     URLを判別し、索引・差分・再開位置を準備する
   approve PLAN
     ユーザーが分析方針にOKした後に承認を記録する
@@ -17,7 +17,8 @@ const HELP = `GitHubスキルの分析準備・差分検出・完了記録
     分析ファイルを保存した後に完了状態を記録する
 
 保存先: SKILL_ANATOMY_WORKSPACE、clone元、実行中の作業フォルダの順で判別。
---tool-rootを指定した場合はそのパスを優先する。
+--workspace PATHはレポートとキャッシュの保存先を指定し、上記より優先する。
+旧オプション--tool-rootは使用できない。--workspaceに置き換える。
 `;
 
 function main(args: string[]): unknown {
@@ -37,6 +38,7 @@ function main(args: string[]): unknown {
     Object.assign(options, {
       'no-confirm': { type: 'boolean' },
       refresh: { type: 'boolean' },
+      workspace: { type: 'string' },
       'tool-root': { type: 'string' },
     });
   if (command === 'complete')
@@ -54,10 +56,12 @@ function main(args: string[]): unknown {
     throw new Error('URLまたはPLANを1つ指定してください。--helpで使い方を確認できます');
   const [input] = parsed.positionals;
   const values = parsed.values;
+  if (values['tool-root'] !== undefined)
+    throw new Error('--tool-rootは廃止しました。保存先は--workspace PATHで指定してください');
   if (command === 'prepare')
     return prepare({
       url: input!,
-      toolRoot: (values['tool-root'] as string | undefined) ?? defaultWorkspace(),
+      workspace: (values.workspace as string | undefined) ?? defaultWorkspace(),
       noConfirm: values['no-confirm'] === true,
       refresh: values.refresh === true,
     });

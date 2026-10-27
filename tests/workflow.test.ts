@@ -90,7 +90,7 @@ class Fixture {
   prepare(suffix = '', noConfirm = false, refresh = false): Prepared {
     const options = {
       url: `https://github.com/Alice/Agent-Skills${suffix}`,
-      toolRoot: this.root,
+      workspace: this.root,
       noConfirm,
       refresh,
     };

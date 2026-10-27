@@ -105,6 +105,8 @@ To choose another location, set this variable before starting your agent:
 export SKILL_ANATOMY_WORKSPACE="$HOME/.local/share/skill-anatomy"
 ```
 
+When calling the CLI directly, use `prepare URL --workspace "/path/to/analysis"` to choose where this run saves reports and caches. This overrides the environment variable and default location. Choose a storage directory outside the installed skill. The former `--tool-root` option returns an error explaining how to migrate.
+
 Skills with the same name are distinguished by their original paths. Reports for deleted skills are retained. You can track reports and `.state.json` together in Git. Do not research the same repository concurrently in the same output location.
 
 Some updates, such as changes limited to PR reviews, may go undetected. Use `--refresh` when you want to research them again.
