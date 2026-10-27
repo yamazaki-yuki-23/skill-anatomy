@@ -52,7 +52,7 @@ export function prepareSnapshot(options, target, root, cache, defaultRef, index)
     let reportHash;
     if (existsSync(reportPath))
       reportHash = digest(readFileSync(reportPath, "utf8"));
-    const unchanged = !(options.refresh && selectedSkills.has(skill)) && old.status === "done" && old.source_signature === signature && old.index_hash === indexHash && index.status === "available" && old.report === report && old.report_hash === reportHash;
+    const unchanged = !(options.refresh && selectedSkills.has(skill)) && old.status === "done" && old.source_signature === signature && old.index_hash === indexHash && old.report === report && old.report_hash === reportHash;
     old.status = unchanged ? "done" : "pending";
     old.report = report;
     state.skills[skill] = old;
@@ -106,7 +106,7 @@ export function prepareSnapshot(options, target, root, cache, defaultRef, index)
     pending: entries.filter((e) => e.selected && e.status === "pending").map((e) => e.skill),
     approved: plan.approved,
     index_status: index.status,
-    warning: index.error ?? null,
+    warning: index.status === "unavailable" ? `GitHub索引を取得できないため、PR・Issueの更新は未確認です。${index.error ? ` ${index.error}` : ""}` : null,
     destination
   };
 }

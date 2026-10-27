@@ -76,7 +76,6 @@ export function prepareSnapshot(
       old.status === 'done' &&
       old.source_signature === signature &&
       old.index_hash === indexHash &&
-      index.status === 'available' &&
       old.report === report &&
       old.report_hash === reportHash;
     old.status = unchanged ? 'done' : 'pending';
@@ -132,7 +131,10 @@ export function prepareSnapshot(
     pending: entries.filter((e) => e.selected && e.status === 'pending').map((e) => e.skill),
     approved: plan.approved,
     index_status: index.status,
-    warning: index.error ?? null,
+    warning:
+      index.status === 'unavailable'
+        ? `GitHub索引を取得できないため、PR・Issueの更新は未確認です。${index.error ? ` ${index.error}` : ''}`
+        : null,
     destination,
   };
 }
