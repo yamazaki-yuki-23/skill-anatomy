@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { digest } from '../skills/skill-anatomy/dist/fingerprint.js';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
@@ -95,6 +97,9 @@ export class ResearchFixture {
         ],
       }),
     );
+    const index = JSON.parse(this.files.get('/github-index.json'));
+    this.plan.index_hash = digest({ status: index.status, items: index.items });
+    this.files.set('/plan.json', JSON.stringify(this.plan));
     for (const [name, content] of Object.entries(this.sources))
       this.files.set(`/cache/source/${name}`, content);
     if (output) mkdirSync(output, { recursive: true });
@@ -178,6 +183,73 @@ export class ResearchFixture {
         };
       }
       if (input !== '/plan.json') return this.deny('Unapproved plan');
+      if (operation === 'index') {
+        if (
+          this.plan.approved !== true ||
+          this.plan.commit !== commit ||
+          this.plan.github_index !== '/github-index.json' ||
+          this.files.get('/plan.json') !== JSON.stringify(this.plan)
+        )
+          return this.deny('Index requires the current approved fixed plan');
+        let number;
+        if (flags.length) {
+          const value =
+            flags.length === 2 && flags[0] === '--number'
+              ? flags[1]
+              : flags.length === 1 && flags[0].startsWith('--number=')
+                ? flags[0].slice('--number='.length)
+                : '';
+          if (!/^[1-9][0-9]*$/.test(value) || !Number.isSafeInteger(Number(value)))
+            return this.deny('Invalid index number or flags');
+          number = Number(value);
+        }
+        const raw = this.files.get('/github-index.json');
+        const index = JSON.parse(raw);
+        if (
+          !['available', 'unavailable'].includes(index.status) ||
+          !Array.isArray(index.items) ||
+          digest({ status: index.status, items: index.items }) !== this.plan.index_hash
+        )
+          return this.deny('Index does not match the fixed plan');
+        const items = index.items.filter((item) => number === undefined || item?.number === number);
+        return {
+          absence_inference: false,
+          index: {
+            ...index,
+            items: items.map((item) => {
+              if (
+                !item ||
+                typeof item !== 'object' ||
+                Array.isArray(item) ||
+                !item.pull_request ||
+                typeof item.pull_request !== 'object' ||
+                Array.isArray(item.pull_request) ||
+                !Number.isSafeInteger(item.number) ||
+                item.number <= 0
+              )
+                return item;
+              const pull = { ...item.pull_request };
+              const html = `${url}/pull/${item.number}`;
+              const redundant = {
+                url: `https://api.github.com/repos/fixture-owner/review-skills/pulls/${item.number}`,
+                html_url: html,
+                diff_url: `${html}.diff`,
+                patch_url: `${html}.patch`,
+              };
+              for (const [key, expected] of Object.entries(redundant))
+                if (pull[key] === expected) delete pull[key];
+              return { ...item, pull_request: pull };
+            }),
+          },
+          snapshot: {
+            commit: this.plan.commit,
+            index_hash: this.plan.index_hash,
+            raw_index: '/github-index.json',
+            raw_sha256: createHash('sha256').update(raw).digest('hex'),
+          },
+          ...(number === undefined ? {} : { requested_number: number, matches: items.length }),
+        };
+      }
       if (operation === 'approve' && !flags.length)
         return { approved: true, already_approved: true };
       if (operation === 'complete') {

@@ -1,4 +1,5 @@
 import { required } from './runtime.ts';
+import { digest } from '../src/fingerprint.ts';
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -529,5 +530,148 @@ test('root diff-tree rejects external processing, writes, extra objects and nonl
     const f = new ResearchFixture(required(cases[0]));
     f.call('run_command', { program: 'git', args });
     assert.equal(f.summary().violations.length, 1);
+  }
+});
+
+interface FixtureIndexView {
+  'absence_inference': boolean;
+  index: { items: Record<string, unknown>[]; status: string; error?: string; unknown?: string };
+  snapshot: { commit: string; 'raw_index': string; 'raw_sha256': string };
+  matches?: number;
+}
+
+test('approved cached index reads preserve snapshot and filter all matching rows without writes', () => {
+  const f = new ResearchFixture(required(cases[0]));
+  const before = JSON.stringify({
+    files: [...f.files],
+    plan: f.plan,
+    state: f.state,
+    writes: f.writes,
+  });
+  const result = f.call('run_command', {
+    program: 'node',
+    args: ['/tool/dist/cli.js', 'index', '/plan.json'],
+  });
+  assert.ok(result && typeof result === 'object' && 'index' in result);
+  const view = result as FixtureIndexView;
+  assert.equal(view.absence_inference, false);
+  assert.equal(required(view.index.items[0]).number, 7);
+  assert.equal(view.snapshot.commit, commit);
+  assert.equal(view.snapshot.raw_index, '/github-index.json');
+  assert.match(view.snapshot.raw_sha256, /^[a-f0-9]{64}$/);
+  for (const flags of [['--number', '7'], ['--number=7']]) {
+    const selected = f.call('run_command', {
+      program: 'node',
+      args: ['/tool/dist/cli.js', 'index', '/plan.json', ...flags],
+    });
+    assert.equal((selected as FixtureIndexView).matches, 1);
+    assert.deepEqual((selected as FixtureIndexView).index.items, view.index.items);
+  }
+  assert.equal(
+    JSON.stringify({ files: [...f.files], plan: f.plan, state: f.state, writes: f.writes }),
+    before,
+  );
+  assert.equal(f.summary().violations.length, 0);
+});
+
+test('cached fixture index retains duplicate IDs, selection fields, unknowns and unavailability', () => {
+  const f = new ResearchFixture(required(cases[0]));
+  const items = [
+    {
+      number: 9,
+      title: 'first',
+      updated_at: null,
+      comments: 2,
+      custom: { nested: true },
+      pull_request: { merged_at: null, html_url: `${url}/pull/9`, extra: 'retained' },
+    },
+    {
+      number: 7,
+      title: 'middle',
+      pull_request: { merged_at: '2026-01-01', html_url: 'https://different.invalid/7' },
+    },
+    { number: 9, title: 'last', pull_request: {} },
+  ];
+  const raw = { status: 'unavailable', error: 'fixed capture unavailable', items, unknown: 'keep' };
+  f.files.set('/github-index.json', JSON.stringify(raw));
+  f.plan.index_hash = digest({ status: raw.status, items });
+  f.files.set('/plan.json', JSON.stringify(f.plan));
+  const before = JSON.stringify({ files: [...f.files], state: f.state, writes: f.writes });
+  const read = (flags: string[]) =>
+    f.call('run_command', {
+      program: 'node',
+      args: ['/tool/dist/cli.js', 'index', '/plan.json', ...flags],
+    }) as FixtureIndexView;
+  const all = read([]);
+  assert.deepEqual(
+    all.index.items.map((item) => item.number),
+    [9, 7, 9],
+  );
+  assert.deepEqual(all.index.items[0], {
+    ...items[0],
+    pull_request: { merged_at: null, extra: 'retained' },
+  });
+  assert.deepEqual(all.index.items[1], items[1]);
+  assert.deepEqual(all.index.items[2], items[2]);
+  assert.equal(all.index.error, raw.error);
+  assert.equal(all.index.unknown, 'keep');
+  assert.equal(all.index.status, 'unavailable');
+  assert.equal(read(['--number=9']).matches, 2);
+  assert.deepEqual(read(['--number', '9']).index.items, [all.index.items[0], all.index.items[2]]);
+  const absent = read(['--number=100']);
+  assert.equal(absent.matches, 0);
+  assert.equal(absent.absence_inference, false);
+  assert.equal(absent.index.status, 'unavailable');
+  assert.equal(JSON.stringify({ files: [...f.files], state: f.state, writes: f.writes }), before);
+  assert.equal(f.summary().violations.length, 0);
+});
+
+test('fixture index rejects invalid flags, numbers, plans, approval and changed snapshots without writes', () => {
+  const invalid = [
+    ['--refresh'],
+    ['--number'],
+    ['--number', '0'],
+    ['--number=-1'],
+    ['--number=1.5'],
+    ['--number=01'],
+    ['--number=9007199254740992'],
+    ['--number=7', '--number=7'],
+    ['--number', '7', '--number', '7'],
+    ['--number=7', '--extra'],
+    ['--number=7;cat /etc/passwd'],
+  ];
+  for (const flags of invalid) {
+    const f = new ResearchFixture(required(cases[0]));
+    const before = JSON.stringify({ files: [...f.files], state: f.state, writes: f.writes });
+    const result = f.call('run_command', {
+      program: 'node',
+      args: ['/tool/dist/cli.js', 'index', '/plan.json', ...flags],
+    });
+    assert.ok(result && typeof result === 'object' && 'error' in result, JSON.stringify(flags));
+    assert.equal(f.summary().violations.length, 1);
+    assert.equal(JSON.stringify({ files: [...f.files], state: f.state, writes: f.writes }), before);
+  }
+  for (const kind of ['unapproved', 'stale', 'outside', 'wrong-plan', 'escape', 'hash']) {
+    const f = new ResearchFixture(required(cases[0]));
+    if (kind === 'unapproved') f.plan.approved = false;
+    if (kind === 'stale') f.files.set('/plan.json', '{}');
+    if (kind === 'outside') f.plan.github_index = '/outside/github-index.json';
+    if (kind === 'hash') f.files.set('/github-index.json', '{"status":"available","items":[]}');
+    const before = JSON.stringify({ files: [...f.files], state: f.state, writes: f.writes });
+    const result = f.call('run_command', {
+      program: 'node',
+      args: [
+        '/tool/dist/cli.js',
+        'index',
+        kind === 'wrong-plan'
+          ? '/other.json'
+          : kind === 'escape'
+            ? '/dir/../plan.json'
+            : '/plan.json',
+      ],
+    });
+    assert.ok(result && typeof result === 'object' && 'error' in result, kind);
+    assert.equal(f.summary().violations.length, 1, kind);
+    assert.equal(JSON.stringify({ files: [...f.files], state: f.state, writes: f.writes }), before);
   }
 });
