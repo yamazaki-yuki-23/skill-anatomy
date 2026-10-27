@@ -121,6 +121,8 @@ If a lock remains after an abnormal exit, recover it as follows:
 
 Locks are released on normal completion and exceptions. There is no automatic recovery based on age or PID, and no recovery waiting period.
 
+After successfully saving a new preparation, `prepare` removes superseded plan directories for the same repository. It retains the latest PLAN and index, resume state, reports, and other repositories' plans. You can continue an interrupted analysis with the latest PLAN; another `prepare` returns a new PLAN carrying the current completion state. Cleanup only removes generated `run-*` directories containing exactly the old PLAN and index for the same state file. Extra files, malformed PLAN metadata, and symbolic links are preserved; cleanup failures produce a warning.
+
 Some updates, such as changes limited to PR reviews, may go undetected. Use `--refresh` when you want to research them again.
 
 </details>

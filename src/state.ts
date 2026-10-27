@@ -6,9 +6,20 @@ export const VERSION = 2;
 export function timestamp(): string {
   return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
-function loadActive(planFile: string): { plan: Plan; state: State } {
-  const plan = readJson<Plan>(planFile);
+function readPlan(planFile: string): Plan {
+  let plan: Plan;
+  try {
+    plan = readJson<Plan>(planFile);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT')
+      throw new Error('PLANが見つかりません。prepareで取得した最新PLANを使ってください');
+    throw error;
+  }
   if (!plan || plan.version !== VERSION) throw new Error('PLANのバージョンが異なります');
+  return plan;
+}
+function loadActive(planFile: string): { plan: Plan; state: State } {
+  const plan = readPlan(planFile);
   const state = readJson<State>(plan.state_file);
   if (state.version !== VERSION) throw new Error('状態ファイルのバージョンが異なります');
   if (state.active_plan !== plan.id)
@@ -27,8 +38,7 @@ function withActivePlan<T>(
   planFile: string,
   operation: (active: { plan: Plan; state: State }) => T,
 ): T {
-  const plan = readJson<Plan>(planFile);
-  if (!plan || plan.version !== VERSION) throw new Error('PLANのバージョンが異なります');
+  const plan = readPlan(planFile);
   return withStateLock(plan.state_file, () => operation(loadActive(planFile)));
 }
 function ensureReport(filename: string): string {
