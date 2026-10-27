@@ -3,7 +3,7 @@ import path from 'node:path';
 import { digest, sorted, createSourceSigner } from './fingerprint.js';
 import { acquire, parseUrl, resolveTarget, fileInventory, fetchIndex } from './repository.js';
 import { discover, reportPaths } from './skills.js';
-import { inside, readJson, writeJson } from './storage.js';
+import { inside, readJson, writeJson, withStateLock } from './storage.js';
 import { VERSION, timestamp } from './state.js';
 import type {
   Entry,
@@ -18,11 +18,30 @@ export function prepare(options: PrepareOptions): unknown {
   const target = parseUrl(options.url);
   mkdirSync(options.workspace, { recursive: true });
   const root = realpathSync(options.workspace);
-  const { cache, defaultRef } = acquire(target, root);
-  return prepareSnapshot(options, target, root, cache, defaultRef, fetchIndex(target));
+  return withStateLock(repositoryStateFile(root, target), () => {
+    const { cache, defaultRef } = acquire(target, root);
+    return prepareSnapshotUnlocked(options, target, root, cache, defaultRef, fetchIndex(target));
+  });
+}
+
+function repositoryStateFile(root: string, target: Target): string {
+  return inside(inside(root, `reports/${target.owner}/${target.repo}`), '.state.json');
 }
 
 export function prepareSnapshot(
+  options: PrepareOptions,
+  target: Target,
+  root: string,
+  cache: string,
+  defaultRef: string,
+  index: GithubIndex,
+): Record<string, unknown> {
+  return withStateLock(repositoryStateFile(root, target), () =>
+    prepareSnapshotUnlocked(options, target, root, cache, defaultRef, index),
+  );
+}
+
+function prepareSnapshotUnlocked(
   options: PrepareOptions,
   target: Target,
   root: string,

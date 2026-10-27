@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { digest, sorted, sourceSignature } from "./fingerprint.js";
-import { inside, readJson, writeJson } from "./storage.js";
+import { inside, readJson, writeJson, withStateLock } from "./storage.js";
 export const VERSION = 2;
 export function timestamp() {
   return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
@@ -17,11 +17,18 @@ function loadActive(planFile) {
   return { plan, state };
 }
 export function approve(planFile) {
-  const { plan } = loadActive(planFile);
-  plan.approved = true;
-  plan.confirmation = "user-approved";
-  writeJson(planFile, plan);
-  return { approved: true, plan_file: planFile };
+  return withActivePlan(planFile, ({ plan }) => {
+    plan.approved = true;
+    plan.confirmation = "user-approved";
+    writeJson(planFile, plan);
+    return { approved: true, plan_file: planFile };
+  });
+}
+function withActivePlan(planFile, operation) {
+  const plan = readJson(planFile);
+  if (!plan || plan.version !== VERSION)
+    throw new Error("PLANのバージョンが異なります");
+  return withStateLock(plan.state_file, () => operation(loadActive(planFile)));
 }
 function ensureReport(filename) {
   let text;
@@ -35,50 +42,51 @@ function ensureReport(filename) {
   return text;
 }
 export function complete(planFile, skill, repository = false, dependencies = []) {
-  const { plan, state } = loadActive(planFile);
-  if (!plan.approved)
-    throw new Error("分析方針が未承認です。ユーザーのOK後にapproveを実行してください");
-  const selected = plan.skills.filter((e) => e.selected);
-  let report;
-  if (repository) {
-    if (selected.some((e) => state.skills[e.skill]?.status !== "done"))
-      throw new Error("個別分析が未完了です");
-    report = inside(plan.destination, "repository-analysis.md");
-    const text = ensureReport(report);
-    state.repository = {
-      commit: plan.commit,
-      analyzed_at: timestamp(),
-      scope: plan.scope,
-      skills: selected.map((e) => e.skill),
-      report_hash: digest(text)
+  return withActivePlan(planFile, ({ plan, state }) => {
+    if (!plan.approved)
+      throw new Error("分析方針が未承認です。ユーザーのOK後にapproveを実行してください");
+    const selected = plan.skills.filter((e) => e.selected);
+    let report;
+    if (repository) {
+      if (selected.some((e) => state.skills[e.skill]?.status !== "done"))
+        throw new Error("個別分析が未完了です");
+      report = inside(plan.destination, "repository-analysis.md");
+      const text = ensureReport(report);
+      state.repository = {
+        commit: plan.commit,
+        analyzed_at: timestamp(),
+        scope: plan.scope,
+        skills: selected.map((e) => e.skill),
+        report_hash: digest(text)
+      };
+    } else {
+      if (!skill)
+        throw new Error("--skillか--repositoryを指定してください");
+      if (!selected.some((e) => e.skill === skill))
+        throw new Error("このPLANの分析対象ではないスキルです");
+      const uniqueDependencies = sorted(new Set(dependencies));
+      if (uniqueDependencies.some((p) => !Object.hasOwn(plan.files, p)))
+        throw new Error("コミットに存在しない依存ファイルです");
+      const current = state.skills[skill];
+      if (!current)
+        throw new Error("状態ファイルに対象スキルがありません");
+      report = inside(plan.destination, current.report);
+      const text = ensureReport(report);
+      Object.assign(current, {
+        source_signature: sourceSignature(plan.cache, plan.commit, plan.files, skill, state.inventory, uniqueDependencies),
+        status: "done",
+        analyzed_commit: plan.commit,
+        analyzed_at: timestamp(),
+        index_hash: plan.index_hash,
+        dependencies: uniqueDependencies,
+        report_hash: digest(text)
+      });
+    }
+    writeJson(plan.state_file, state);
+    return {
+      saved: report,
+      done: selected.filter((e) => state.skills[e.skill]?.status === "done").length,
+      total: selected.length
     };
-  } else {
-    if (!skill)
-      throw new Error("--skillか--repositoryを指定してください");
-    if (!selected.some((e) => e.skill === skill))
-      throw new Error("このPLANの分析対象ではないスキルです");
-    const uniqueDependencies = sorted(new Set(dependencies));
-    if (uniqueDependencies.some((p) => !Object.hasOwn(plan.files, p)))
-      throw new Error("コミットに存在しない依存ファイルです");
-    const current = state.skills[skill];
-    if (!current)
-      throw new Error("状態ファイルに対象スキルがありません");
-    report = inside(plan.destination, current.report);
-    const text = ensureReport(report);
-    Object.assign(current, {
-      source_signature: sourceSignature(plan.cache, plan.commit, plan.files, skill, state.inventory, uniqueDependencies),
-      status: "done",
-      analyzed_commit: plan.commit,
-      analyzed_at: timestamp(),
-      index_hash: plan.index_hash,
-      dependencies: uniqueDependencies,
-      report_hash: digest(text)
-    });
-  }
-  writeJson(plan.state_file, state);
-  return {
-    saved: report,
-    done: selected.filter((e) => state.skills[e.skill]?.status === "done").length,
-    total: selected.length
-  };
+  });
 }
