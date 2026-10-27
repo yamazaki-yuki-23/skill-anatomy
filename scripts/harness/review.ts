@@ -51,9 +51,9 @@ export async function reviewRepository(
     'features.multi_agent': false,
     'features.skill_search': false,
     'features.remote_plugin': false,
-    'mcp_servers.repository.command': process.execPath,
+    'mcp_servers.repository.command': 'bun',
     'mcp_servers.repository.args': [
-      path.join(root, 'scripts/harness/review-server.mjs'),
+      path.join(root, 'scripts/harness/review-server.ts'),
       snapshotFile,
     ],
     'mcp_servers.repository.required': true,

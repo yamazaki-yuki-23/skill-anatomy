@@ -257,7 +257,7 @@ test('the review MCP server serves only snapshot keys', () => {
     { id: 3, method: 'tools/call', params: { name: 'read_file', arguments: { path: snapshot } } },
     { id: 4, method: 'tools/call', params: { name: 'run_command', arguments: { program: 'sh' } } },
   ];
-  const result = spawnSync(process.execPath, ['scripts/harness/review-server.mjs', snapshot], {
+  const result = spawnSync(process.execPath, ['scripts/harness/review-server.ts', snapshot], {
     input:
       requests.map((request) => JSON.stringify({ jsonrpc: '2.0', ...request })).join('\n') + '\n',
     encoding: 'utf8',
@@ -297,7 +297,7 @@ test('verification cannot report success with no checks', () => {
 test('runtime lint rules reject Bun globals and development-only imports', () => {
   const root = fixture();
   const config = JSON.parse(readFileSync('.oxlintrc.json', 'utf8'));
-  config.jsPlugins = [path.resolve('scripts/style-rules.mjs')];
+  config.jsPlugins = [path.resolve('scripts/style-rules.ts')];
   write(root, '.oxlintrc.json', JSON.stringify(config));
   const file = path.join(root, 'src/example.ts');
   write(
@@ -340,4 +340,87 @@ test('release check refuses tag and compiled version mismatches', () => {
   assert.throws(() => checkRelease(root, 'v0.3.1'), /tag/);
   write(root, 'skills/skill-anatomy/dist/cli.js', "console.log('0.2.0');");
   assert.throws(() => checkRelease(root, 'v0.3.0'), /CLI/);
+});
+
+test('Bun loads the TypeScript style plugin and enforces naming rules', () => {
+  const root = fixture();
+  const config = JSON.parse(readFileSync('.oxlintrc.json', 'utf8'));
+  config.jsPlugins = [path.resolve('scripts/style-rules.ts')];
+  write(root, '.oxlintrc.json', JSON.stringify(config));
+  const file = path.join(root, 'src/names.ts');
+  const lint = () =>
+    Bun.spawnSync([
+      process.execPath,
+      '--bun',
+      path.resolve('node_modules/oxlint/bin/oxlint'),
+      '--config',
+      path.join(root, '.oxlintrc.json'),
+      file,
+    ]);
+  write(
+    root,
+    'src/names.ts',
+    'export interface badName { value: string }\nexport function BadFunction() { return true; }\n',
+  );
+  const bad = lint();
+  assert.notEqual(bad.exitCode, 0);
+  assert.match(bad.stdout.toString() + bad.stderr.toString(), /style(?:\/|\()naming/);
+  write(
+    root,
+    'src/names.ts',
+    'export interface GoodName { value: string }\nexport function goodFunction() { return true; }\n',
+  );
+  const good = lint();
+  assert.equal(good.exitCode, 0, good.stdout.toString() + good.stderr.toString());
+});
+
+test('typed review RPC rejects malformed params while list_files keeps optional arguments', () => {
+  const root = fixture();
+  const snapshot = path.join(root, 'snapshot.json');
+  writeFileSync(
+    snapshot,
+    JSON.stringify({ files: { 'README.md': 'public text' }, excluded: [], commit: 'fixture' }),
+  );
+  const requests = [
+    null,
+    { id: 0, method: 'initialize', params: null },
+    { id: 1, method: 'tools/call', params: { name: 'list_files' } },
+    { id: 2, method: 'ping', params: false },
+    {
+      id: 3,
+      method: 'tools/call',
+      params: { name: 'read_file', arguments: { path: '/etc/passwd' } },
+    },
+  ];
+  const result = spawnSync(process.execPath, ['scripts/harness/review-server.ts', snapshot], {
+    input: requests.map((value) => JSON.stringify(value)).join('\n') + '\n',
+    encoding: 'utf8',
+    timeout: 10_000,
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const replies: unknown[] = result.stdout
+    .trim()
+    .split('\n')
+    .map((line) => JSON.parse(line));
+  assert.equal(replies.length, 5);
+  for (const index of [0, 1, 4]) {
+    const reply = replies[index];
+    assert.ok(reply && typeof reply === 'object' && 'error' in reply);
+    const error = reply.error;
+    assert.ok(error && typeof error === 'object' && 'code' in error);
+    assert.equal(error.code, -32603);
+  }
+  assert.deepEqual(replies[2], {
+    jsonrpc: '2.0',
+    id: 1,
+    result: {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({ files: ['README.md'], excluded: [], commit: 'fixture' }),
+        },
+      ],
+    },
+  });
+  assert.deepEqual(replies[3], { jsonrpc: '2.0', id: 2, result: {} });
 });

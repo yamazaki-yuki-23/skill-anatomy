@@ -25,7 +25,7 @@
       }
     ]
   },
-  "jsPlugins": ["./scripts/style-rules.mjs"],
+  "jsPlugins": ["./scripts/style-rules.ts"],
   "overrides": [
     {
       "files": ["src/**/*.ts"],
