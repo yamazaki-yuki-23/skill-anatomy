@@ -16,8 +16,8 @@ import type {
 } from './types.js';
 export function prepare(options: PrepareOptions): unknown {
   const target = parseUrl(options.url);
-  mkdirSync(options.toolRoot, { recursive: true });
-  const root = realpathSync(options.toolRoot);
+  mkdirSync(options.workspace, { recursive: true });
+  const root = realpathSync(options.workspace);
   const { cache, defaultRef } = acquire(target, root);
   return prepareSnapshot(options, target, root, cache, defaultRef, fetchIndex(target));
 }

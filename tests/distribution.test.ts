@@ -127,3 +127,42 @@ test('missing Git is reported before attempting repository analysis', () => {
   assert.equal(result.status, 1);
   assert.match(result.stderr, /gitを起動できません/);
 });
+
+test('workspace option selects storage before Git acquisition', () => {
+  const f = fixture();
+  const custom = path.join(f.base, 'custom workspace');
+  const result = spawnSync(
+    nodeExecutable,
+    [
+      path.join(f.packageRoot, 'dist/cli.js'),
+      'prepare',
+      'https://github.com/a/b',
+      '--workspace',
+      custom,
+    ],
+    { cwd: f.packageRoot, encoding: 'utf8', env: { ...process.env, PATH: '' } },
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /gitを起動できません/);
+  assert.ok(existsSync(custom));
+  assert.ok(!existsSync(path.join(f.packageRoot, 'reports')));
+});
+
+test('legacy storage option explains migration without creating its destination', () => {
+  const f = fixture();
+  const custom = path.join(f.base, 'legacy destination');
+  const result = spawnSync(
+    nodeExecutable,
+    [
+      path.join(f.packageRoot, 'dist/cli.js'),
+      'prepare',
+      'https://github.com/a/b',
+      '--tool-root',
+      custom,
+    ],
+    { cwd: f.packageRoot, encoding: 'utf8', env: { ...process.env, PATH: '' } },
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /--tool-root.*--workspace/);
+  assert.ok(!existsSync(custom));
+});

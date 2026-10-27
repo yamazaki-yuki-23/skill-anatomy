@@ -7,8 +7,8 @@ import { inside, readJson, writeJson } from "./storage.js";
 import { VERSION, timestamp } from "./state.js";
 export function prepare(options) {
   const target = parseUrl(options.url);
-  mkdirSync(options.toolRoot, { recursive: true });
-  const root = realpathSync(options.toolRoot);
+  mkdirSync(options.workspace, { recursive: true });
+  const root = realpathSync(options.workspace);
   const { cache, defaultRef } = acquire(target, root);
   return prepareSnapshot(options, target, root, cache, defaultRef, fetchIndex(target));
 }

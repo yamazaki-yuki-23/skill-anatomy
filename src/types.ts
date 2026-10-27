@@ -6,7 +6,7 @@ export interface Target {
 }
 export interface PrepareOptions {
   url: string;
-  toolRoot: string;
+  workspace: string;
   noConfirm?: boolean;
   refresh?: boolean;
 }
