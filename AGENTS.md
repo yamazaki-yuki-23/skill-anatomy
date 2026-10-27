@@ -31,6 +31,7 @@ Skill anatomyは、スキルの仕組みを知り、自作に活かすためのA
 | `src/fingerprint.ts`、`src/state.ts` | 差分判定、承認と完了記録 |
 | `src/storage.ts`、`src/workspace.ts` | 保存処理と保存先の検証 |
 | `src/cli.ts` | CLIの実装 |
+| `src/types.ts` | 調査計画、分析状態、スキルの状態などの共有型定義 |
 | `skills/skill-anatomy/dist/` | コンパイル済みのJavaScript。Gitで管理し、インストール先ではビルド不要 |
 | `scripts/anatomy` | CLIの起動スクリプト |
 | `skills/skill-anatomy/SKILL.md` | エージェントの作業手順 |
