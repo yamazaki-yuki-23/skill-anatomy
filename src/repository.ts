@@ -95,6 +95,30 @@ export function resolveTarget(
       kind: 'repository',
     };
   const [kind, ...segments] = tail;
+  const first = segments[0];
+  if (
+    first &&
+    /^[a-f0-9]{40}$/i.test(first) &&
+    segments.every((part) => /^[a-z0-9_.-]+$/i.test(part) && !part.includes('..'))
+  ) {
+    let unshadowed = false;
+    try {
+      // Keep literal symbolic-ref names so SHA-shaped aliases still shadow objects.
+      const refs = git(cache, ['rev-parse', '--symbolic', '--all']);
+      unshadowed = !refs.toLowerCase().includes(first.toLowerCase());
+    } catch {}
+    if (unshadowed) {
+      try {
+        return {
+          commit: git(cache, ['rev-parse', '--verify', `${first}^{commit}`]).trim(),
+          target: segments.slice(1).join('/'),
+          kind: kind!,
+        };
+      } catch {
+        throw new Error('URLのブランチ・タグ・コミットを解決できません');
+      }
+    }
+  }
   for (let size = segments.length; size > 0; size--) {
     const ref = segments.slice(0, size).join('/');
     const candidates = [`refs/heads/${ref}`, `refs/tags/${ref}`];
