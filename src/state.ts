@@ -6,7 +6,7 @@ export const VERSION = 2;
 export function timestamp(): string {
   return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
-function loadActive(planFile: string): { plan: Plan; state: State } {
+export function loadActive(planFile: string): { plan: Plan; state: State } {
   const plan = readJson<Plan>(planFile);
   if (!plan || plan.version !== VERSION) throw new Error('PLANのバージョンが異なります');
   const state = readJson<State>(plan.state_file);

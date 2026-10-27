@@ -4,6 +4,7 @@ import type { ParseArgsOptionsConfig } from 'node:util';
 import { prepare } from './anatomy.js';
 import { approve, complete } from './state.js';
 import { defaultWorkspace } from './workspace.js';
+import { indexView, parseIndexNumber } from './index-view.js';
 
 const HELP = `GitHubスキルの分析準備・差分検出・完了記録
 
@@ -13,6 +14,8 @@ const HELP = `GitHubスキルの分析準備・差分検出・完了記録
     URLを判別し、索引・差分・再開位置を準備する
   approve PLAN
     ユーザーが分析方針にOKした後に承認を記録する
+  index PLAN [--number N]
+    承認済みPLANの固定索引を読み取り専用で表示する
   complete PLAN (--skill PATH/SKILL.md | --repository) [--dependency PATH ...]
     分析ファイルを保存した後に完了状態を記録する
 
@@ -30,7 +33,7 @@ function main(args: string[]): unknown {
     console.log('0.3.0');
     return;
   }
-  if (!['prepare', 'approve', 'complete'].includes(command))
+  if (!['prepare', 'approve', 'complete', 'index'].includes(command))
     throw new Error(`不明なコマンドです: ${command}`);
   const options: ParseArgsOptionsConfig = { help: { type: 'boolean', short: 'h' } };
   if (command === 'prepare')
@@ -45,6 +48,7 @@ function main(args: string[]): unknown {
       repository: { type: 'boolean' },
       dependency: { type: 'string', multiple: true },
     });
+  if (command === 'index') Object.assign(options, { number: { type: 'string' } });
   const parsed = parseArgs({ args: rest, allowPositionals: true, strict: true, options });
   if (parsed.values.help) {
     console.log(HELP);
@@ -62,6 +66,14 @@ function main(args: string[]): unknown {
       refresh: values.refresh === true,
     });
   if (command === 'approve') return approve(input!);
+  if (command === 'index') {
+    if (rest.filter((arg) => arg === '--number' || arg.startsWith('--number=')).length > 1)
+      throw new Error('--numberは1回だけ指定してください');
+    return indexView(
+      input!,
+      values.number === undefined ? undefined : parseIndexNumber(values.number as string),
+    );
+  }
   const skill = values.skill as string | undefined;
   const repository = values.repository === true;
   const dependencies = (values.dependency as string[] | undefined) ?? [];
@@ -74,7 +86,8 @@ function main(args: string[]): unknown {
 
 try {
   const result = main(process.argv.slice(2));
-  if (result !== undefined) console.log(JSON.stringify(result, null, 2));
+  if (result !== undefined)
+    console.log(JSON.stringify(result, null, process.argv[2] === 'index' ? undefined : 2));
 } catch (error) {
   console.error(`エラー: ${(error as Error).message}`);
   process.exitCode = 1;
