@@ -4,7 +4,7 @@
 bun run test:security
 ```
 
-開発者向けの検証コマンド。Bun 1.3.8以上、Node.js 22以上と、ログイン済みのCodex CLIを使う。スキルの利用者が実行する必要はない。
+開発者向けの検証コマンド。Bun 1.3.8以上、Node.js 22以上と、ログイン済みのCodex CLIを使う。スキルの利用者が実行する必要はない。 開発用のTypeScriptとMCPサーバーはBunで実行する。配布CLIは従来どおりNode.jsとGitで動き、利用者にBunやビルドを要求しない。
 
 ## 検証すること
 

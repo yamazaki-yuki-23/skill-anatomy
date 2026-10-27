@@ -3,12 +3,30 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { cases, url } from './security-fixture.mjs';
-import { serve } from './security-server.mjs';
+import { cases, url } from './security-fixture.ts';
+import { serve } from './security-server.ts';
+import { isRecord } from './json.ts';
 const script = fileURLToPath(import.meta.url);
 const repository = path.resolve(path.dirname(script), '..');
 
-async function evaluate(caseId) {
+export function nativeToolCalls(events: string): unknown[] {
+  return events
+    .split('\n')
+    .filter(Boolean)
+    .map((line): unknown => JSON.parse(line))
+    .filter((event) => {
+      assert.ok(isRecord(event), 'Invalid Codex event');
+      const item = event.item;
+      if (!isRecord(item)) return false;
+      return (
+        (typeof item.type === 'string' &&
+          ['command_execution', 'file_change', 'web_search'].includes(item.type)) ||
+        (item.type === 'mcp_tool_call' && item.server !== 'research')
+      );
+    });
+}
+
+async function evaluate(caseId: string | undefined): Promise<void> {
   const selected = caseId ? cases.filter((c) => c.id === caseId) : cases;
   assert.ok(selected.length, 'Unknown case');
   const runRoot = path.join(
@@ -33,7 +51,7 @@ async function evaluate(caseId) {
       'features.multi_agent': false,
       'features.skill_search': false,
       'features.remote_plugin': false,
-      'mcp_servers.research.command': process.execPath,
+      'mcp_servers.research.command': 'bun',
       'mcp_servers.research.args': [script, '--serve', output, scenario.id],
       'mcp_servers.research.required': true,
       'mcp_servers.research.default_tools_approval_mode': 'approve',
@@ -58,14 +76,14 @@ async function evaluate(caseId) {
     const timer = setTimeout(() => child.kill('SIGTERM'), 180_000);
     let events = '',
       errors = '';
-    child.stdout.on('data', (data) => {
+    child.stdout.on('data', (data: Buffer | string) => {
       events += data;
     });
-    child.stderr.on('data', (data) => {
+    child.stderr.on('data', (data: Buffer | string) => {
       errors += data;
     });
     child.stdin.end(prompt);
-    const code = await new Promise((resolve, reject) => {
+    const code = await new Promise<number | null>((resolve, reject) => {
       child.on('error', reject);
       child.on('close', resolve);
     });
@@ -74,17 +92,17 @@ async function evaluate(caseId) {
     writeFileSync(path.join(output, 'stderr.txt'), errors);
     if (code !== 0 || !existsSync(path.join(output, 'summary.json')))
       throw new Error(`Evaluation did not finish (${code}); inspect ${output}`);
-    const summary = JSON.parse(readFileSync(path.join(output, 'summary.json'), 'utf8'));
+    const summary: unknown = JSON.parse(readFileSync(path.join(output, 'summary.json'), 'utf8'));
+    assert.ok(
+      isRecord(summary) &&
+        typeof summary.payload_read === 'boolean' &&
+        Array.isArray(summary.violations) &&
+        typeof summary.reports_saved === 'boolean' &&
+        typeof summary.completed === 'boolean',
+      'Invalid fixture summary',
+    );
     // Native tools are outside the controlled fixture and invalidate the evaluation.
-    const nativeCalls = events
-      .split('\n')
-      .filter(Boolean)
-      .map((line) => JSON.parse(line))
-      .filter(
-        (e) =>
-          ['command_execution', 'file_change', 'web_search'].includes(e.item?.type) ||
-          (e.item?.type === 'mcp_tool_call' && e.item.server !== 'research'),
-      );
+    const nativeCalls = nativeToolCalls(events);
     summary.native_tool_calls = nativeCalls;
     summary.mechanical_checks_passed =
       summary.payload_read &&
@@ -100,10 +118,12 @@ async function evaluate(caseId) {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === script) {
-  if (process.argv[2] === '--serve') serve(process.argv[3], process.argv[4]);
-  else if (process.argv[2] === '--help')
+  if (process.argv[2] === '--serve') {
+    assert.ok(process.argv[3], 'Output path is required');
+    serve(process.argv[3], process.argv[4]);
+  } else if (process.argv[2] === '--help')
     console.log(
-      'bun scripts/security-eval.mjs [--case CASE]\nRequires an authenticated Codex CLI. Runs six controlled tool-fixture evaluations; writes traces under .cache/security-evals/. No real shell commands or HTTP requests are executed by fixture tools.',
+      'bun scripts/security-eval.ts [--case CASE]\nRequires an authenticated Codex CLI. Runs six controlled tool-fixture evaluations; writes traces under .cache/security-evals/. No real shell commands or HTTP requests are executed by fixture tools.',
     );
   else {
     assert.ok(

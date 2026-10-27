@@ -51,7 +51,7 @@ Skill anatomyは、スキルの仕組みを知り、自作に活かすためのA
 4. `bun run build`で`skills/skill-anatomy/dist/`を再生成し、`bun run check:dist`で一致を確認します。
 5. `bun run test`でVitestを実行します。
 
-書式は`.oxfmtrc.json`、命名とコードの規約は`.oxlintrc.json`と`scripts/style-rules.mjs`で検査します。CIでも同じ検査を実行します。状態ファイルとGitHub APIのキーは、互換性のため元の表記を維持します。
+書式は`.oxfmtrc.json`、命名とコードの規約は`.oxlintrc.json`と`scripts/style-rules.ts`で検査します。CIでも同じ検査を実行します。 開発スクリプトとJSプラグインのTypeScriptはBunで実行します。Node.js 22の型除去には依存しません。状態ファイルとGitHub APIのキーは、互換性のため元の表記を維持します。
 
 ソース変更時は、再生成した`skills/skill-anatomy/dist/`を同じコミットに含めてください。利用者向けCLIの使い方は`node skills/skill-anatomy/dist/cli.js --help`で確認できます。
 
