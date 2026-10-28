@@ -85,6 +85,8 @@ The repository report covers the skill list and shared design ideas. Each skill'
 
 Each report type uses consistent headings in a fixed order, so you can find usage, history, design, and applications in the same place when comparing skills.
 
+When evaluation or test materials are present, the analysis explains their inputs, expected outputs, and failure conditions as evidence for design choices. Evaluations and tests are not executed, and definitions or illustrative examples are not presented as measured results.
+
 To apply the findings to your own skill, paste its contents or explicitly name the local regular files to read. The application section explains its problem, the design to apply, and what to change and why. References and neighboring files are not read automatically, and your skill is not edited or executed. The research record identifies the supplied material and gaps. Changes to application files are not detected automatically; use `--refresh` for additional research on a completed report.
 
 After repository analysis completes, the agent updates `reports/index.md` with design ideas, application conditions, source reports, research dates, and analyzed commits. The index path is proposed before approval. Rows from other reports are preserved, and index changes do not affect analysis resume decisions. Older reports are imported only when explicitly selected; they are not discovered automatically. Do not update the shared index concurrently.
