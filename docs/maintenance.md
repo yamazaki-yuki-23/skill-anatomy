@@ -8,6 +8,8 @@ bun run verify
 
 利用者の実行環境はNode.js 22以上とGit。Bunは開発専用とする。開発にはBun 1.3.8以上も使い、初回は`bun install --frozen-lockfile --ignore-scripts`で依存を導入する。
 
+公開スキルのfrontmatterには呼び出し時の案内として`argument-hint`を記載する。`allowed-tools`は設定せず、ツールの使用可否と確認は実行環境の権限設定に従う。スキルの案内でツール権限を自動許可せず、`--no-confirm`もツールの権限確認を省かない。`agents/openai.yaml`の既定プロンプトは、レポートの言語と利用者向け説明に合わせて日本語にする。
+
 テストは`tests/*.test.ts`、共有ヘルパーは`tests/runtime.ts`に置く。`bun run check`は本体・開発スクリプト・テストを同じstrict設定で型検査し、`bun run test`はVitestをBun上で実行する。配布物の動作はNode.jsを使うテストで確認する。
 
 ## 必須と推奨の区別
