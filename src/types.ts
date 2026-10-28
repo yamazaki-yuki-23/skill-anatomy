@@ -4,11 +4,13 @@ export interface Target {
   repo: string;
   tail: string[];
 }
+export type ReportFormat = 'markdown' | 'html';
 export interface PrepareOptions {
   url: string;
   workspace: string;
   noConfirm?: boolean;
   refresh?: boolean;
+  format?: ReportFormat;
 }
 export interface GithubIndex {
   status: 'available' | 'unavailable';
@@ -37,12 +39,19 @@ export interface State {
 export interface Entry {
   skill: string;
   report: string;
+  html: string;
   status: 'pending' | 'done';
   selected: boolean;
 }
+export type HtmlStatus = 'missing' | 'valid' | 'invalid';
+export interface HtmlProgress {
+  report: string;
+  status: HtmlStatus;
+}
 export interface Progress {
-  skills: { skill: string; report: string; status: 'pending' | 'done' }[];
-  repository: { report: string; status: 'pending' | 'done' };
+  format: ReportFormat;
+  skills: { skill: string; report: string; status: 'pending' | 'done'; html: HtmlProgress }[];
+  repository: { report: string; status: 'pending' | 'done'; html: HtmlProgress };
   done: number;
   total: number;
 }
@@ -65,6 +74,7 @@ export interface Plan {
   'index_hash': string;
   approved: boolean;
   confirmation: string;
+  format?: ReportFormat;
   files: Files;
   skills: Entry[];
 }

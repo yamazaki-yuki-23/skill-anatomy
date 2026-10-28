@@ -5,6 +5,6 @@
   "singleQuote": true,
   "semi": true,
   "printWidth": 100,
-  "ignorePatterns": ["**/dist/**", "bun.lock", "**/*.md", "assets/**", "examples/**"],
+  "ignorePatterns": ["**/dist/**", "bun.lock", "**/*.md", "**/*.html", "assets/**", "examples/**"],
   "quoteProps": "preserve"
 }

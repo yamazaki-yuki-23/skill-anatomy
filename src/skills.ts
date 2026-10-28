@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { digest, sorted } from './fingerprint.js';
+import { htmlPath } from './html.js';
 import type { Files } from './types.js';
 function isSkill(name: string): boolean {
   return name === 'SKILL.md' || name.endsWith('/SKILL.md');
@@ -61,19 +62,25 @@ export function reportPaths(
       mapping[skill] = `${report.slice(0, -3)}--${digest(skill).slice(0, 12)}.md`;
   }
   const occupied = new Map(Object.entries(previous).filter(([, report]) => report));
+  // Each report owns its Markdown path and the sibling HTML path written beside it.
+  const owned = (report: string): string[] => {
+    const key = report.toLowerCase();
+    return [key, htmlPath(key)];
+  };
   for (const skill of skills) {
     let candidate = previous[skill] || mapping[skill]!;
     let attempt = 0;
-    const conflicts = (report: string): boolean => {
-      const key = report.toLowerCase();
-      return [...occupied].some(([owner, existing]) => {
-        const other = existing.toLowerCase();
-        return (
+    const conflicts = (report: string): boolean =>
+      [...occupied].some(
+        ([owner, existing]) =>
           owner !== skill &&
-          (key === other || key.startsWith(`${other}/`) || other.startsWith(`${key}/`))
-        );
-      });
-    };
+          owned(report).some((key) =>
+            owned(existing).some(
+              (other) =>
+                key === other || key.startsWith(`${other}/`) || other.startsWith(`${key}/`),
+            ),
+          ),
+      );
     while (conflicts(candidate)) {
       candidate = `skill-analyses/${digest(skill)}-${attempt++}/${mapping[skill]!.slice('skill-analyses/'.length)}`;
     }
