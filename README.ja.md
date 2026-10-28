@@ -8,7 +8,7 @@
 
 GitHub上のスキルのURLを渡すと、仕組みや設計の工夫、自作への応用を日本語のレポートにまとめます。
 
-[Skill anatomy自身の分析例](examples/skill-anatomy.md)で、レポートの内容を確認できます。
+[Skill anatomy自身の分析例](examples/skill-anatomy.md)は、2026年10月28日に[コミット`61d695d`](https://github.com/yamazaki-yuki-23/skill-anatomy/tree/61d695d94dba7fcd5824f113b85ff07e114220e8)を対象として、このスキルで生成しました。本文は生成結果で、レビュー後に出典の行番号3件だけを補正しています。[grill-meの分析](examples/grill-me.md)は、2026年10月22日に調べた過去の例として残し、再生成していません。
 
 ## はじめる
 
