@@ -8,7 +8,7 @@ Understand how your favorite agent skills work, and apply what you learn to your
 
 Pass the URL of a skill on GitHub to get a Japanese report on how it works, its design decisions, and ideas for your own skills.
 
-See the [analysis of Skill anatomy itself, in Japanese](examples/skill-anatomy.md), for an example report.
+The [self-analysis example, in Japanese](examples/skill-anatomy.md), was generated with this skill on October 28, 2026, from [commit `61d695d`](https://github.com/yamazaki-yuki-23/skill-anatomy/tree/61d695d94dba7fcd5824f113b85ff07e114220e8). Its report body is the generated output, with only three source line references corrected after review. The [grill-me analysis](examples/grill-me.md) remains a historical example researched on October 22, 2026; it was not regenerated.
 
 ## Get started
 
