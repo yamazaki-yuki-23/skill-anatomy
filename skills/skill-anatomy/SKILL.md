@@ -17,7 +17,7 @@ Node.js 22以上とGitを使う。PR・Issueの取得には認証済みGitHub CL
 
 ## 手順
 
-1. `prepare URL` を実行する。リポジトリ・個別スキル・フォルダを自動判別する。`--no-confirm` と `--refresh` は利用者が指定した場合だけ渡す。返された `plan_file` をPLANとし、対象・件数・更新対象・調査範囲・`destination`・取得できなかった情報・重点を提示する。本文の分析やレポート更新はまだ始めない。
+1. `prepare URL` を実行する。リポジトリ・個別スキル・フォルダを自動判別する。`--no-confirm` と `--refresh` は利用者が指定した場合だけ渡す。返された `plan_file` をPLANとし、対象・件数・更新対象・調査範囲・`destination`・取得できなかった情報・重点を提示する。`discussion_updates` があれば、索引だけの更新では完了済み本文を保持し、議論の更新は未確認であることも伝える。本文の分析やレポート更新はまだ始めない。
 2. `--no-confirm` がなければ開始してよいか1回尋ね、OKを待って `approve PLAN` を実行する。確認省略時も方針は表示し、方針や対象を変えたら再承認を受ける。ツールの権限確認は省略しない。
 3. [調査手順](references/research.md)を読み、PLANの固定コミットから根拠を調べる。呼び出し先まで処理をたどり、重要な設計判断を変更前後と理由から理解する。
 4. [執筆・完成基準](references/report-format.md)に従い、`status PLAN` の `skills` にある `pending` のスキルを1件ずつ分析する。各項目の `skill` と `report` を参照し、日本語Markdownを保存する。基準を満たした後に `complete PLAN --skill '元のSKILL.mdのパス'` を実行し、読んだ共有ファイルは `--dependency PATH` を繰り返して登録する。完了応答の `done` / `total` で件数を伝え、`status PLAN` で残件を確認する。未完了なら続け、中断時はPLANと残件を示す。

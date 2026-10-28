@@ -49,6 +49,8 @@ function prepareSnapshotUnlocked(options, target, root, cache, defaultRef, index
   if (state.version !== VERSION)
     throw new Error("状態ファイルのバージョンが異なります");
   const indexHash = digest({ status: index.status, items: index.items });
+  const unavailableIndexHash = digest({ status: "unavailable", items: [] });
+  const discussionUpdates = [];
   const mappings = reportPaths(allSkills, Object.fromEntries(Object.entries(state.skills).map(([skill, entry]) => [skill, entry.report])));
   const entries = [];
   const signSource = createSourceSigner(cache, commit, files, allSkills);
@@ -70,7 +72,10 @@ function prepareSnapshotUnlocked(options, target, root, cache, defaultRef, index
     let reportHash;
     if (existsSync(reportPath))
       reportHash = digest(readFileSync(reportPath, "utf8"));
-    const unchanged = !(options.refresh && selectedSkills.has(skill)) && old.status === "done" && old.source_signature === signature && old.index_hash === indexHash && old.report === report && old.report_hash === reportHash;
+    const previousIndexStatus = old.index_status ?? (old.index_hash === unavailableIndexHash ? "unavailable" : "available");
+    const unchanged = !(options.refresh && selectedSkills.has(skill)) && old.status === "done" && old.source_signature === signature && previousIndexStatus === index.status && old.report === report && old.report_hash === reportHash;
+    if (unchanged && index.status === "available" && old.index_hash !== indexHash && selectedSkills.has(skill))
+      discussionUpdates.push(skill);
     old.status = unchanged ? "done" : "pending";
     old.report = report;
     state.skills[skill] = old;
@@ -127,9 +132,11 @@ function prepareSnapshotUnlocked(options, target, root, cache, defaultRef, index
     pending: entries.filter((e) => e.selected && e.status === "pending").map((e) => e.skill),
     approved: plan.approved,
     index_status: index.status,
+    discussion_updates: discussionUpdates,
     warning: [
       index.status === "unavailable" ? `GitHub索引を取得できないため、PR・Issueの更新は未確認です。${index.error ? ` ${index.error}` : ""}` : null,
-      ...cleanupWarnings
+      ...cleanupWarnings,
+      discussionUpdates.length ? "PR・Issue索引に更新があります。完了済み本文は保持し、議論の更新は未確認です。再確認する場合は--refreshを指定してください。" : null
     ].filter(Boolean).join(" ") || null,
     destination
   };

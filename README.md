@@ -87,7 +87,7 @@ Each report type uses consistent headings in a fixed order, so you can find usag
 
 ## Resume or repeat research
 
-Pass the same URL again to research unfinished skills and those affected by changes. Changes to shared references or the pull request and issue list may trigger research of all skills.
+Pass the same URL again to research unfinished skills and those affected by source or shared-reference changes. If only the pull request and issue index changes, completed report content is retained, and `discussion_updates` plus a warning identify unverified discussion updates. The warning persists until explicit research completes. Use `--refresh` to research the selected scope and incorporate discussions. The full index is still acquired.
 
 If the GitHub index is unavailable on both runs, completed analyses are reused when their sources and saved reports are unchanged. Pull request and issue updates remain unverified, so the CLI warns on every run, and new analyses record the missing information in their research scope. All skills are researched again when index access returns or a previously available index becomes unavailable. Use `--refresh` to force research again.
 

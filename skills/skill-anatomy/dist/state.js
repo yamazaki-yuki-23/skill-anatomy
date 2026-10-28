@@ -107,6 +107,7 @@ export function complete(planFile, skill, repository = false, dependencies = [])
         analyzed_commit: plan.commit,
         analyzed_at: timestamp(),
         index_hash: plan.index_hash,
+        index_status: plan.index_status,
         dependencies: uniqueDependencies,
         report_hash: digest(text)
       });
