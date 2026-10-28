@@ -1,6 +1,7 @@
 ---
 name: skill-anatomy
 license: MIT
+argument-hint: "<GitHub URL> [--no-confirm] [--refresh]"
 description: GitHubで公開されたAIエージェント向けスキルを調べ、作者が向き合った課題と設計判断を読み解く。成り立ち・仕組みを深く学び、自作へ応用するための日本語Markdownを作りたいときに使う。
 ---
 

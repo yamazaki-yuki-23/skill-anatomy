@@ -1,4 +1,4 @@
 interface:
   display_name: 'Skill anatomy'
   short_description: 'GitHubのスキルを読み解き、設計の工夫と応用例を日本語ドキュメントにまとめる'
-  default_prompt: 'Use $skill-anatomy to analyze this GitHub skill URL and explain its design in Japanese Markdown.'
+  default_prompt: '$skill-anatomy でこのGitHubスキルのURLを分析し、設計を日本語Markdownで説明してください。'
