@@ -37,6 +37,7 @@ interface Prepared {
     'total_skills': number;
     'index_status': string;
     warning: string | null;
+    'discussion_updates': string[];
   };
   plan: Plan;
   planFile: string;
@@ -112,6 +113,8 @@ class Fixture {
     assert.ok(typeof result.total_skills === 'number');
     assert.ok(typeof result.index_status === 'string');
     assert.ok(result.warning === null || typeof result.warning === 'string');
+    const discussionUpdates = result.discussion_updates ?? [];
+    assert.ok(isStringArray(discussionUpdates));
     const preparedResult = {
       ...result,
       'plan_file': result.plan_file,
@@ -122,6 +125,7 @@ class Fixture {
       'total_skills': result.total_skills,
       'index_status': result.index_status,
       warning: result.warning,
+      'discussion_updates': discussionUpdates,
     };
     return {
       result: preparedResult,
@@ -249,17 +253,57 @@ test('deleted cross-skill dependencies invalidate their consumers', () => {
   ]);
 });
 
-test('GitHub index changes and acquisition failures trigger research', () => {
+test('GitHub index-only updates notify without invalidating completed research', () => {
   const f = new Fixture();
   f.finishAll();
   f.index = { status: 'available', items: [{ number: 1, updated_at: '2026-10-19T00:00:00Z' }] };
-  assert.equal(f.prepare().result.pending.length, 3);
+  const updated = f.prepare();
+  assert.deepEqual(updated.result.pending, []);
+  assert.equal(updated.result.discussion_updates.length, 3);
+  assert.match(updated.result.warning ?? '', /索引.*更新.*--refresh/);
+  assert.equal(f.prepare().result.discussion_updates.length, 3);
   f.finishAll();
   f.index = { status: 'unavailable', items: [], error: 'rate limited' };
   const { result } = f.prepare();
   assert.equal(result.index_status, 'unavailable');
   assert.match(result.warning ?? '', /rate limited/);
   assert.equal(result.pending.length, 3);
+});
+
+test('index-only updates preserve report bytes and refresh acknowledges new discussion', () => {
+  const f = new Fixture();
+  const original = f.finishAll();
+  const report = original.plan.skills[0]!.report;
+  const before = readFileSync(report, 'utf8');
+  const previous = readJson<State>(original.plan.state_file);
+  for (const entry of Object.values(previous.skills)) delete entry.index_status;
+  writeFileSync(original.plan.state_file, JSON.stringify(previous));
+  f.index = {
+    status: 'available',
+    items: [{ number: 999, title: 'Unrelated repository discussion' }],
+  };
+  const reused = f.prepare('', true);
+  assert.deepEqual(reused.result.pending, []);
+  assert.equal(readFileSync(report, 'utf8'), before);
+  const refreshed = f.prepare('', true, true);
+  assert.equal(refreshed.result.pending.length, 3);
+  for (const entry of refreshed.plan.skills) f.finish(refreshed, entry.skill);
+  assert.deepEqual(f.prepare().result.discussion_updates, []);
+});
+
+test('discussion update notices and forced acknowledgement follow the selected scope', () => {
+  const f = new Fixture();
+  f.finishAll();
+  f.index = { status: 'available', items: [{ number: 12 }] };
+  const selected = f.prepare('/tree/main/skills/review');
+  assert.deepEqual(selected.result.discussion_updates, ['skills/review/SKILL.md']);
+  assert.deepEqual(selected.result.pending, []);
+  const refreshed = f.prepare('/tree/main/skills/review', true, true);
+  f.finish(refreshed, 'skills/review/SKILL.md');
+  assert.deepEqual(f.prepare().result.discussion_updates, [
+    'skills/testing/SKILL.md',
+    'skills/writing/SKILL.md',
+  ]);
 });
 
 test('stale plans cannot approve or complete', () => {
@@ -484,7 +528,10 @@ test('individual analysis preserves other reports and inventory', () => {
 test('unchanged unavailable indexes resume completed reports and still detect source changes', () => {
   const f = new Fixture();
   f.index = { status: 'unavailable', items: [], error: 'gh missing' };
-  f.finishAll();
+  const completed = f.finishAll();
+  const legacy = readJson<State>(completed.plan.state_file);
+  for (const entry of Object.values(legacy.skills)) delete entry.index_status;
+  writeFileSync(completed.plan.state_file, JSON.stringify(legacy));
   f.index.error = 'authentication unavailable';
   const resumed = f.prepare();
   assert.deepEqual(resumed.result.pending, []);

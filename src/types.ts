@@ -21,6 +21,7 @@ export interface SkillState {
   dependencies: string[];
   'source_signature': string;
   'index_hash': string;
+  'index_status'?: GithubIndex['status'];
   'report_hash': string;
   'analyzed_commit': string | null;
   'analyzed_at': string | null;
@@ -60,7 +61,7 @@ export interface Plan {
   'state_file': string;
   'plan_file': string;
   'github_index': string;
-  'index_status': string;
+  'index_status': GithubIndex['status'];
   'index_hash': string;
   approved: boolean;
   confirmation: string;

@@ -232,6 +232,7 @@ export class ResearchFixture {
           pending: this.plan.skills
             .filter((entry) => entry.status !== 'done')
             .map((entry) => entry.skill),
+          discussion_updates: [],
         };
       }
       if (input !== '/plan.json') return this.deny('Unapproved plan');

@@ -131,6 +131,7 @@ export function complete(
         analyzed_commit: plan.commit,
         analyzed_at: timestamp(),
         index_hash: plan.index_hash,
+        index_status: plan.index_status,
         dependencies: uniqueDependencies,
         report_hash: digest(text),
       });
