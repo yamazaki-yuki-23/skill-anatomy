@@ -52,6 +52,8 @@ export function validateSkill(root: string): Finding[] {
     'references/writing.md',
     'assets/templates/skill-analysis.md',
     'assets/templates/repository-analysis.md',
+    'assets/templates/learning-index.md',
+    'references/learning-index.md',
     'agents/openai.yaml',
   ]) {
     if (!existsSync(path.join(skillRoot, relative)))

@@ -147,6 +147,26 @@ class Fixture {
   }
 }
 
+test('cross-report learning index changes do not invalidate completed analyses', () => {
+  const f = new Fixture();
+  const prepared = f.finishAll();
+  writeFileSync(path.join(prepared.plan.destination, 'repository-analysis.md'), '# 全体分析\n');
+  complete(prepared.planFile, undefined, true);
+  const before = status(prepared.planFile);
+  const learningIndex = path.join(f.root, 'reports/index.md');
+  const stateBefore = readFileSync(prepared.plan.state_file, 'utf8');
+  for (const content of ['# 学んだ設計\n', '# 別のリポジトリの学びを追加\n']) {
+    writeFileSync(learningIndex, content);
+    assert.deepEqual(status(prepared.planFile), before);
+    assert.equal(readFileSync(prepared.plan.state_file, 'utf8'), stateBefore);
+  }
+  unlinkSync(learningIndex);
+  assert.deepEqual(status(prepared.planFile), before);
+  const resumed = f.prepare('', true);
+  assert.deepEqual(resumed.result.pending, []);
+  assert.equal(status(resumed.planFile).repository.status, 'done');
+});
+
 test('confirmation gate, missing report and completion count', () => {
   const f = new Fixture();
   const prepared = f.prepare();

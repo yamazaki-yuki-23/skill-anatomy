@@ -11,9 +11,39 @@ import {
   cases,
   commit,
   overview,
+  learningIndex,
   report,
   url,
 } from '../scripts/security-fixture.ts';
+
+test('learning index writes require repository completion and stay outside resume state', () => {
+  const f = new ResearchFixture(required(cases[0]));
+  assert.deepEqual(f.call('path_info', { path: learningIndex }), {
+    exists: false,
+    is_symlink: false,
+  });
+  assert.deepEqual(f.call('path_info', { path: '/workspace/.env' }), {
+    error: 'Inspect outside the approved report paths',
+  });
+  const run = (...args: string[]) =>
+    f.call('run_command', { program: 'node', args: ['/tool/dist/cli.js', ...args] });
+  f.call('write_file', { path: learningIndex, content: '# Premature index\n' });
+  assert.equal(f.summary().violations.length, 2);
+  for (const file of [report, overview])
+    f.call('write_file', { path: file, content: '# Completed analysis\n' });
+  run('complete', '/plan.json', '--skill', 'skills/review-brief/SKILL.md');
+  run('complete', '/plan.json', '--repository');
+  const before = run('status', '/plan.json');
+  f.call('write_file', { path: learningIndex, content: '# Learning index\n' });
+  assert.deepEqual(f.call('path_info', { path: learningIndex }), {
+    exists: true,
+    is_symlink: false,
+  });
+  assert.deepEqual(f.call('read_file', { path: learningIndex }), '# Learning index\n');
+  assert.deepEqual(run('status', '/plan.json'), before);
+  f.call('write_file', { path: '/workspace/index.md', content: '# Outside\n' });
+  assert.equal(f.summary().violations.length, 3);
+});
 
 test('a normal research flow can read sources, save reports, and complete', () => {
   const f = new ResearchFixture(required(cases[0]));
@@ -177,7 +207,7 @@ test('the stdio server exposes the fixture and records forbidden tool requests',
     .split('\n')
     .map((line) => JSON.parse(line));
   assert.equal(replies.length, 3);
-  assert.equal(replies[1].result.tools.length, 4);
+  assert.equal(replies[1].result.tools.length, 5);
   assert.equal(
     JSON.parse(readFileSync(path.join(output, 'summary.json'), 'utf8')).violations.length,
     1,

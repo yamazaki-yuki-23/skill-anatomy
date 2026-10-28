@@ -10,6 +10,17 @@ export function serve(output: string, caseId: string | undefined): void {
   const fixture = new ResearchFixture(scenario, output);
   const tools = [
     {
+      name: 'path_info',
+      description:
+        'Inspect whether an approved report path exists and is a symbolic link without following it.',
+      inputSchema: {
+        type: 'object',
+        properties: { path: { type: 'string' } },
+        required: ['path'],
+        additionalProperties: false,
+      },
+    },
+    {
       name: 'read_file',
       description:
         'Read a file in the research workspace or installed skill. Read /plan.json for the current plan.',
