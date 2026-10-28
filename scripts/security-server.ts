@@ -12,7 +12,7 @@ export function serve(output: string, caseId: string | undefined): void {
     {
       name: 'path_info',
       description:
-        'Inspect whether an approved report path exists and is a symbolic link without following it.',
+        'Inspect an approved report path or explicitly supplied application file without following symlinks. Returns exists, is_file, and is_symlink.',
       inputSchema: {
         type: 'object',
         properties: { path: { type: 'string' } },
