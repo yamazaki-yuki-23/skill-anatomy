@@ -60,7 +60,7 @@ To include pull requests and issues, install the GitHub CLI and authenticate wit
 - How instruction order, approval points, and the division of responsibilities across references shape the agent's decisions.
 - What conditions and instructions you would need to apply a design idea to a different problem.
 
-Skill anatomy was built to explore why a skill's instructions work the way they do, and how you might design your own. You can add a question alongside the URL, such as "explain how responsibilities are split between SKILL.md and its references".
+Skill anatomy was built to explore why a skill's instructions work the way they do, and how you might design your own. You can add a question alongside the URL, such as "explain how responsibilities are split between SKILL.md and its references". Your focus guides research and explanation in the relevant sections. Research boundaries and the other completion criteria still apply; unanswered questions remain in the unverified scope. If a completed report needs additional research, the agent explains how to use `--refresh`.
 
 Explanations cite their sources and distinguish the author's statements from the analyst's interpretation. Unknown motivations are identified. Research stays within the target repository's files, commits, pull requests, and issues. Target skills are not executed or scored.
 
