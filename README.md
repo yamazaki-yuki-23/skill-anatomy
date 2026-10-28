@@ -135,4 +135,6 @@ Some updates, such as changes limited to PR reviews, may go undetected. Use `--r
 
 </details>
 
+The report style borrows from [i-have-adhd](https://github.com/ayghri/i-have-adhd/blob/main/skills/i-have-adhd/SKILL.md) (answer first, numbered steps, concrete results) and [yomiyasu](https://github.com/nanaism/yomiyasu/blob/main/skills/yomiyasu/SKILL.md) (revise while keeping meaning and the strength of claims).
+
 [MIT License](LICENSE)
