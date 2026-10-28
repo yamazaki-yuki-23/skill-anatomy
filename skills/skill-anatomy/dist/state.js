@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { digest, sorted, sourceSignature } from "./fingerprint.js";
+import { htmlPath, inspectHtml } from "./html.js";
 import { inside, readJson, writeJson, withStateLock } from "./storage.js";
 export const VERSION = 2;
 export function timestamp() {
@@ -35,24 +36,67 @@ export function approve(planFile) {
     return { approved: true, plan_file: planFile };
   });
 }
+function htmlProgress(report) {
+  const html = htmlPath(report);
+  if (!existsSync(html))
+    return { report: html, status: "missing" };
+  return {
+    report: html,
+    status: inspectHtml(readFileSync(html, "utf8")).length ? "invalid" : "valid"
+  };
+}
 export function status(planFile) {
   return withActivePlan(planFile, ({ plan, state }) => {
     const selected = plan.skills.filter((entry) => entry.selected);
     const skills = selected.map((entry) => ({
       skill: entry.skill,
       report: entry.report,
-      status: state.skills[entry.skill]?.status ?? "pending"
+      status: state.skills[entry.skill]?.status ?? "pending",
+      html: htmlProgress(entry.report)
     }));
     const done = skills.filter((entry) => entry.status === "done").length;
     const report = inside(plan.destination, "repository-analysis.md");
     const recorded = state.repository;
     const repositoryDone = done === skills.length && recorded !== null && typeof recorded === "object" && "commit" in recorded && recorded.commit === plan.commit && "scope" in recorded && recorded.scope === plan.scope && "skills" in recorded && Array.isArray(recorded.skills) && digest(recorded.skills) === digest(selected.map((entry) => entry.skill)) && "report_hash" in recorded && existsSync(report) && recorded.report_hash === digest(readFileSync(report, "utf8"));
     return {
+      format: plan.format ?? "markdown",
       skills,
-      repository: { report, status: repositoryDone ? "done" : "pending" },
+      repository: {
+        report,
+        status: repositoryDone ? "done" : "pending",
+        html: htmlProgress(report)
+      },
       done,
       total: skills.length
     };
+  });
+}
+export function checkHtml(planFile, skill, repository = false) {
+  return withActivePlan(planFile, ({ plan }) => {
+    let report;
+    if (repository)
+      report = inside(plan.destination, "repository-analysis.md");
+    else {
+      if (!skill)
+        throw new Error("--skillか--repositoryを指定してください");
+      const entry = plan.skills.find((e) => e.selected && e.skill === skill);
+      if (!entry)
+        throw new Error("このPLANの分析対象ではないスキルです");
+      report = entry.report;
+    }
+    const html = htmlPath(report);
+    let text;
+    try {
+      text = readFileSync(html, "utf8");
+    } catch {
+      throw new Error(`HTML版を先に保存してください: ${html}`);
+    }
+    const problems = inspectHtml(text);
+    if (problems.length)
+      throw new Error(`HTML版が条件を満たしません: ${html}
+${problems.map((p) => `- ${p}`).join(`
+`)}`);
+    return { checked: html, valid: true };
   });
 }
 function withActivePlan(planFile, operation) {

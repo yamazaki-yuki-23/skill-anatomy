@@ -24,7 +24,7 @@ export function validateSkill(root: string): Finding[] {
     if (typeof data?.description !== 'string' || !data.description.trim())
       report(skillFile, 'Description is required');
     if (data?.license !== 'MIT') report(skillFile, 'License must agree with the repository');
-    if (data?.['argument-hint'] !== '<GitHub URL> [--no-confirm] [--refresh]')
+    if (data?.['argument-hint'] !== '<GitHub URL> [--no-confirm] [--refresh] [--format html]')
       report(skillFile, 'Argument hint must describe the URL and supported invocation flags');
     if (data?.metadata && typeof data.metadata === 'object') {
       for (const key of Object.keys(data.metadata)) {
@@ -54,6 +54,9 @@ export function validateSkill(root: string): Finding[] {
     'assets/templates/repository-analysis.md',
     'assets/templates/learning-index.md',
     'references/learning-index.md',
+    'references/html-report.md',
+    'assets/templates/skill-analysis.html',
+    'assets/templates/repository-analysis.html',
     'agents/openai.yaml',
   ]) {
     if (!existsSync(path.join(skillRoot, relative)))

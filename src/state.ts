@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { digest, sorted, sourceSignature } from './fingerprint.js';
+import { htmlPath, inspectHtml } from './html.js';
 import { inside, readJson, writeJson, withStateLock } from './storage.js';
-import type { Plan, Progress, State } from './types.js';
+import type { HtmlProgress, Plan, Progress, State } from './types.js';
 export const VERSION = 2;
 export function timestamp(): string {
   return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
@@ -34,6 +35,14 @@ export function approve(planFile: string): unknown {
     return { approved: true, plan_file: planFile };
   });
 }
+function htmlProgress(report: string): HtmlProgress {
+  const html = htmlPath(report);
+  if (!existsSync(html)) return { report: html, status: 'missing' };
+  return {
+    report: html,
+    status: inspectHtml(readFileSync(html, 'utf8')).length ? 'invalid' : 'valid',
+  };
+}
 export function status(planFile: string): Progress {
   return withActivePlan(planFile, ({ plan, state }) => {
     const selected = plan.skills.filter((entry) => entry.selected);
@@ -41,6 +50,7 @@ export function status(planFile: string): Progress {
       skill: entry.skill,
       report: entry.report,
       status: state.skills[entry.skill]?.status ?? 'pending',
+      html: htmlProgress(entry.report),
     }));
     const done = skills.filter((entry) => entry.status === 'done').length;
     const report = inside(plan.destination, 'repository-analysis.md');
@@ -60,11 +70,41 @@ export function status(planFile: string): Progress {
       existsSync(report) &&
       recorded.report_hash === digest(readFileSync(report, 'utf8'));
     return {
+      format: plan.format ?? 'markdown',
       skills,
-      repository: { report, status: repositoryDone ? 'done' : 'pending' },
+      repository: {
+        report,
+        status: repositoryDone ? 'done' : 'pending',
+        html: htmlProgress(report),
+      },
       done,
       total: skills.length,
     };
+  });
+}
+export function checkHtml(planFile: string, skill?: string, repository = false): unknown {
+  return withActivePlan(planFile, ({ plan }) => {
+    let report: string;
+    if (repository) report = inside(plan.destination, 'repository-analysis.md');
+    else {
+      if (!skill) throw new Error('--skillか--repositoryを指定してください');
+      const entry = plan.skills.find((e) => e.selected && e.skill === skill);
+      if (!entry) throw new Error('このPLANの分析対象ではないスキルです');
+      report = entry.report;
+    }
+    const html = htmlPath(report);
+    let text: string;
+    try {
+      text = readFileSync(html, 'utf8');
+    } catch {
+      throw new Error(`HTML版を先に保存してください: ${html}`);
+    }
+    const problems = inspectHtml(text);
+    if (problems.length)
+      throw new Error(
+        `HTML版が条件を満たしません: ${html}\n${problems.map((p) => `- ${p}`).join('\n')}`,
+      );
+    return { checked: html, valid: true };
   });
 }
 function withActivePlan<T>(

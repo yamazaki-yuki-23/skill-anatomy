@@ -1,5 +1,6 @@
 import path from "node:path";
 import { digest, sorted } from "./fingerprint.js";
+import { htmlPath } from "./html.js";
 function isSkill(name) {
   return name === "SKILL.md" || name.endsWith("/SKILL.md");
 }
@@ -48,16 +49,14 @@ export function reportPaths(skills, previous = {}) {
       mapping[skill] = `${report.slice(0, -3)}--${digest(skill).slice(0, 12)}.md`;
   }
   const occupied = new Map(Object.entries(previous).filter(([, report]) => report));
+  const owned = (report) => {
+    const key = report.toLowerCase();
+    return [key, htmlPath(key)];
+  };
   for (const skill of skills) {
     let candidate = previous[skill] || mapping[skill];
     let attempt = 0;
-    const conflicts = (report) => {
-      const key = report.toLowerCase();
-      return [...occupied].some(([owner, existing]) => {
-        const other = existing.toLowerCase();
-        return owner !== skill && (key === other || key.startsWith(`${other}/`) || other.startsWith(`${key}/`));
-      });
-    };
+    const conflicts = (report) => [...occupied].some(([owner, existing]) => owner !== skill && owned(report).some((key) => owned(existing).some((other) => key === other || key.startsWith(`${other}/`) || other.startsWith(`${key}/`))));
     while (conflicts(candidate)) {
       candidate = `skill-analyses/${digest(skill)}-${attempt++}/${mapping[skill].slice("skill-analyses/".length)}`;
     }

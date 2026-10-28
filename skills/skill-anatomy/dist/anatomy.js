@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { digest, sorted, createSourceSigner } from "./fingerprint.js";
+import { htmlPath } from "./html.js";
 import { acquire, parseUrl, resolveTarget, fileInventory, fetchIndex } from "./repository.js";
 import { discover, reportPaths } from "./skills.js";
 import { inside, readJson, writeJson, withStateLock } from "./storage.js";
@@ -82,6 +83,7 @@ function prepareSnapshotUnlocked(options, target, root, cache, defaultRef, index
     entries.push({
       skill,
       report: reportPath,
+      html: inside(destination, htmlPath(report)),
       status: old.status,
       selected: selectedSkills.has(skill)
     });
@@ -111,6 +113,7 @@ function prepareSnapshotUnlocked(options, target, root, cache, defaultRef, index
     index_hash: indexHash,
     approved: !!options.noConfirm,
     confirmation: options.noConfirm ? "skipped-by-user" : "required",
+    format: options.format ?? "markdown",
     files,
     skills: entries
   };
@@ -131,6 +134,7 @@ function prepareSnapshotUnlocked(options, target, root, cache, defaultRef, index
     selected_skills: selected.length,
     pending: entries.filter((e) => e.selected && e.status === "pending").map((e) => e.skill),
     approved: plan.approved,
+    format: plan.format,
     index_status: index.status,
     discussion_updates: discussionUpdates,
     warning: [
