@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
 import { prepare } from "./anatomy.js";
-import { approve, complete } from "./state.js";
+import { approve, complete, status } from "./state.js";
 import { defaultWorkspace } from "./workspace.js";
 const HELP = `GitHubスキルの分析準備・差分検出・完了記録
 
@@ -10,6 +10,8 @@ const HELP = `GitHubスキルの分析準備・差分検出・完了記録
     URLを判別し、索引・差分・再開位置を準備する
   approve PLAN
     ユーザーが分析方針にOKした後に承認を記録する
+  status PLAN
+    選択対象ごとの現在の状態と全体分析の完了状態を確認する
   complete PLAN (--skill PATH/SKILL.md | --repository) [--dependency PATH ...]
     分析ファイルを保存した後に完了状態を記録する
 
@@ -27,7 +29,7 @@ function main(args) {
     console.log("0.3.0");
     return;
   }
-  if (!["prepare", "approve", "complete"].includes(command))
+  if (!["prepare", "approve", "status", "complete"].includes(command))
     throw new Error(`不明なコマンドです: ${command}`);
   const options = { help: { type: "boolean", short: "h" } };
   if (command === "prepare")
@@ -63,6 +65,8 @@ function main(args) {
     });
   if (command === "approve")
     return approve(input);
+  if (command === "status")
+    return status(input);
   const skill = values.skill;
   const repository = values.repository === true;
   const dependencies = values.dependency ?? [];

@@ -148,6 +148,7 @@ function prepareSnapshotUnlocked(
   state.active_plan = id;
   state.inventory = allSkills;
   state.removed = sorted(Object.keys(state.skills).filter((s) => !allSkills.includes(s)));
+  if (entries.some((entry) => entry.status === 'pending')) state.repository = null;
   writeJson(indexFile, index);
   writeJson(planFile, plan);
   writeJson(stateFile, state);

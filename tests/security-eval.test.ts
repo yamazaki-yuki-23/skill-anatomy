@@ -208,6 +208,17 @@ test('literal Git paths preserve the fixture read-only boundary', () => {
   assert.equal(f.summary().violations.length, 2);
 });
 
+test('status rejects unapproved plans and extra flags', () => {
+  const f = new ResearchFixture(required(cases[0]));
+  const run = (...args: string[]) =>
+    f.call('run_command', { program: 'node', args: ['/tool/dist/cli.js', ...args] });
+  assert.deepEqual(run('status', '/outside-plan.json'), { error: 'Unapproved plan' });
+  assert.deepEqual(run('status', '/plan.json', '--repository'), {
+    error: 'Command is outside the approved research operations',
+  });
+  assert.equal(f.summary().violations.length, 2);
+});
+
 test('progress reads and re-prepare reflect completion while the original plan stays a snapshot', () => {
   const f = new ResearchFixture(required(cases[0]));
   const read = (filename: string) => {
@@ -218,6 +229,12 @@ test('progress reads and re-prepare reflect completion while the original plan s
   const run = (...args: string[]) =>
     f.call('run_command', { program: 'node', args: ['/tool/dist/cli.js', ...args] });
   const initialPlan = read('/plan.json');
+  assert.deepEqual(run('status', '/plan.json'), {
+    skills: [{ skill: 'skills/review-brief/SKILL.md', report, status: 'pending' }],
+    repository: { report: overview, status: 'pending' },
+    done: 0,
+    total: 1,
+  });
   const initialPrepare = run('prepare', url);
   assert.ok(initialPrepare && typeof initialPrepare === 'object' && 'pending' in initialPrepare);
   assert.deepEqual(initialPrepare.pending, ['skills/review-brief/SKILL.md']);
@@ -238,6 +255,12 @@ test('progress reads and re-prepare reflect completion while the original plan s
     ...pending,
     skills: { [skill]: { status: 'done', report: 'skill-analyses/review-brief.md' } },
   };
+  assert.deepEqual(run('status', '/plan.json'), {
+    skills: [{ skill, report, status: 'done' }],
+    repository: { report: overview, status: 'pending' },
+    done: 1,
+    total: 1,
+  });
   assert.deepEqual(read(initialPlan.state_file), individualDone);
   assert.deepEqual(read('/plan.json'), initialPlan);
   assert.equal(initialPlan.skills[0].status, 'pending');
@@ -256,10 +279,23 @@ test('progress reads and re-prepare reflect completion while the original plan s
     repository: { commit, scope: 'repository', skills: [skill] },
   });
   const repositoryResume = run('prepare', url);
+  assert.deepEqual(run('status', '/plan.json'), {
+    skills: [{ skill, report, status: 'done' }],
+    repository: { report: overview, status: 'done' },
+    done: 1,
+    total: 1,
+  });
   assert.ok(
     repositoryResume && typeof repositoryResume === 'object' && 'pending' in repositoryResume,
   );
   assert.deepEqual(repositoryResume.pending, []);
+  f.call('write_file', { path: overview, content: '# Changed repository analysis\n' });
+  assert.deepEqual(run('status', '/plan.json'), {
+    skills: [{ skill, report, status: 'done' }],
+    repository: { report: overview, status: 'pending' },
+    done: 1,
+    total: 1,
+  });
   assert.equal(f.summary().completed, true);
   assert.deepEqual(f.summary().violations, []);
 });

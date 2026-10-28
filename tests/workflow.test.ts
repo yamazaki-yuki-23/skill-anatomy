@@ -17,7 +17,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { test, onTestFinished } from 'vitest';
-import { approve, complete } from '../src/state.ts';
+import { approve, complete, status } from '../src/state.ts';
 import { canonicalJson, digest } from '../src/fingerprint.ts';
 import { discover, reportPaths } from '../src/skills.ts';
 import { inside, readJson, withStateLock } from '../src/storage.ts';
@@ -180,6 +180,9 @@ test('distributed Node CLI preserves the approval gate and records completed rep
   const blocked = invoke('complete', prepared.planFile, '--skill', entry.skill);
   assert.equal(blocked.status, 1);
   assert.match(blocked.stderr, /未承認/);
+  const progress = invoke('status', prepared.planFile);
+  assert.equal(progress.status, 0, progress.stderr);
+  assert.equal(JSON.parse(progress.stdout).done, 0);
   const approved = invoke('approve', prepared.planFile);
   assert.equal(approved.status, 0, approved.stderr);
   const completed = invoke('complete', prepared.planFile, '--skill', entry.skill);
@@ -419,6 +422,51 @@ test('repository completion requires every selected report', () => {
   assert.throws(() => complete(prepared.planFile, undefined, true), /未完了/);
   for (const entry of prepared.plan.skills) f.finish(prepared, entry.skill);
   assert.equal(doneCount(complete(prepared.planFile, undefined, true)), 3);
+});
+
+test('status reports the selected current progress and validates repository completion', () => {
+  const f = new Fixture();
+  const prepared = f.prepare('', true);
+  const initial = status(prepared.planFile);
+  assert.equal(initial.done, 0);
+  assert.equal(initial.total, 3);
+  assert.equal(initial.repository.status, 'pending');
+  f.finish(prepared, 'skills/review/SKILL.md');
+  assert.deepEqual(
+    status(prepared.planFile).skills.map((entry) => entry.status),
+    ['done', 'pending', 'pending'],
+  );
+  for (const entry of prepared.plan.skills) f.finish(prepared, entry.skill);
+  const repositoryReport = path.join(prepared.plan.destination, 'repository-analysis.md');
+  writeFileSync(repositoryReport, '# Repository report\n');
+  complete(prepared.planFile, undefined, true);
+  assert.equal(status(prepared.planFile).repository.status, 'done');
+  writeFileSync(repositoryReport, '# Changed repository report\n');
+  assert.equal(status(prepared.planFile).repository.status, 'pending');
+  const individual = f.prepare('/tree/main/skills/review', true);
+  const selected = status(individual.planFile);
+  assert.equal(selected.total, 1);
+  assert.equal(selected.skills[0]?.skill, 'skills/review/SKILL.md');
+  assert.equal(selected.repository.status, 'pending');
+  assert.throws(() => status(prepared.planFile), /古いPLAN|PLANが見つかりません/);
+});
+
+test('repository completion stays pending after individual research is repeated', () => {
+  const f = new Fixture();
+  const initial = f.finishAll();
+  const overview = path.join(initial.plan.destination, 'repository-analysis.md');
+  writeFileSync(overview, '# Repository analysis\n');
+  complete(initial.planFile, undefined, true);
+  const unchanged = f.prepare('', true);
+  assert.equal(status(unchanged.planFile).repository.status, 'done');
+  f.index = { status: 'available', items: [{ number: 8 }] };
+  const refreshed = f.prepare('', true);
+  for (const entry of refreshed.plan.skills) f.finish(refreshed, entry.skill);
+  assert.equal(status(refreshed.planFile).repository.status, 'pending');
+  complete(refreshed.planFile, undefined, true);
+  assert.equal(status(refreshed.planFile).repository.status, 'done');
+  f.finish(refreshed, 'skills/review/SKILL.md');
+  assert.equal(status(refreshed.planFile).repository.status, 'pending');
 });
 
 test('individual analysis preserves other reports and inventory', () => {

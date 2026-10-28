@@ -39,6 +39,12 @@ export interface Entry {
   status: 'pending' | 'done';
   selected: boolean;
 }
+export interface Progress {
+  skills: { skill: string; report: string; status: 'pending' | 'done' }[];
+  repository: { report: string; status: 'pending' | 'done' };
+  done: number;
+  total: number;
+}
 export interface Plan {
   version: number;
   id: string;

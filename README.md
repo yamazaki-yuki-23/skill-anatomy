@@ -101,6 +101,8 @@ Add these options after the URL:
 <details>
 <summary>Change the output location and understand reruns</summary>
 
+When calling the CLI directly, use `status PLAN` to see each selected skill's `pending` / `done` state, the repository analysis's `repository.status`, and the `done` / `total` count. Pass the `plan_file` from the latest `prepare` as `PLAN`. Individual states are completion records; run `prepare` to reassess changes to sources or individual reports. When individual research becomes pending or an individual completion record is updated, the old repository completion record is invalidated and stays `pending` until you record repository completion again.
+
 To choose another location, set this variable before starting your agent:
 
 ```sh
