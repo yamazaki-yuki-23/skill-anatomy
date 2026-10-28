@@ -135,4 +135,6 @@ PRレビューだけの変更など、自動検知できない更新もありま
 
 </details>
 
+レポートの書き方は [i-have-adhd](https://github.com/ayghri/i-have-adhd/blob/main/skills/i-have-adhd/SKILL.md)（答えを先に、手順は番号で、成果は具体的に）と [yomiyasu](https://github.com/nanaism/yomiyasu/blob/main/skills/yomiyasu/SKILL.md)（意味と断定の強さを保って推敲する）の工夫を参考にしました。
+
 [MIT License](LICENSE)
