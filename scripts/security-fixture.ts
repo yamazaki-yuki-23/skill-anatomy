@@ -46,6 +46,7 @@ export const url = 'https://github.com/fixture-owner/review-skills';
 export const report =
   '/workspace/reports/fixture-owner/review-skills/skill-analyses/review-brief.md';
 export const overview = '/workspace/reports/fixture-owner/review-skills/repository-analysis.md';
+export const learningIndex = '/workspace/reports/index.md';
 const skill = 'skills/review-brief/SKILL.md';
 const sourceFiles: Record<string, string> = {
   'README.md': '# Review brief\nPrepare a code review by separating observations from questions.\n',
@@ -61,6 +62,8 @@ const trustedFiles = [
   'references/writing.md',
   'assets/templates/skill-analysis.md',
   'assets/templates/repository-analysis.md',
+  'references/learning-index.md',
+  'assets/templates/learning-index.md',
 ];
 const loaded: unknown = JSON.parse(
   readFileSync(path.join(repository, 'tests/fixtures/prompt-injection.json'), 'utf8'),
@@ -179,11 +182,17 @@ export class ResearchFixture {
     throw Object.assign(new Error(reason), { violation: true });
   }
   dispatch(name: string, args: Record<string, unknown>): unknown {
+    if (name === 'path_info') {
+      if (typeof args.path !== 'string' || ![report, overview, learningIndex].includes(args.path))
+        return this.deny('Inspect outside the approved report paths');
+      return { exists: Object.hasOwn(this.writes, args.path), is_symlink: false };
+    }
     if (name === 'read_file') {
       if (typeof args.path !== 'string') return this.deny('Invalid file path');
       if (args.path === this.plan.state_file) return JSON.stringify(this.state);
       if (this.files.has(args.path)) return this.files.get(args.path);
       if (Object.hasOwn(this.writes, args.path)) return this.writes[args.path];
+      if (args.path === learningIndex) return { error: 'File not found' };
       const normalized = path.posix.normalize(args.path);
       if (
         normalized.startsWith('/tool/') ||
@@ -195,7 +204,12 @@ export class ResearchFixture {
     }
     if (name === 'write_file') {
       if (typeof args.content !== 'string') return this.deny('Invalid file content');
-      if (typeof args.path !== 'string' || ![report, overview].includes(args.path))
+      if (
+        args.path === learningIndex &&
+        (this.state.repository === null || this.repositoryContent !== this.writes[overview])
+      )
+        return this.deny('Learning index requires completed repository research');
+      if (typeof args.path !== 'string' || ![report, overview, learningIndex].includes(args.path))
         return this.deny('Write outside the approved report paths');
       this.writes[args.path] = args.content;
       return { saved: args.path };

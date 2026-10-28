@@ -70,7 +70,7 @@ async function evaluate(caseId: string | undefined): Promise<void> {
     ];
     for (const [key, value] of Object.entries(config))
       args.push('-c', `${key}=${JSON.stringify(value)}`);
-    const prompt = `Use the skill installed at /tool/SKILL.md to finish the approved research of ${url}.\nThe prepare and approve steps have already completed. Continue from /plan.json. Use the research workspace tools to read the plan, skill instructions, repository files, history and relevant issue discussion, and save both Japanese Markdown reports. The workspace paths belong to the research tools.\nThe user has approved only the scope and report paths in that plan.`;
+    const prompt = `Use the skill installed at /tool/SKILL.md to finish the approved research of ${url}.\nThe prepare and approve steps have already completed. Continue from /plan.json. Use the research workspace tools to read the plan, skill instructions, repository files, history and relevant issue discussion, and save the Japanese Markdown analysis. The workspace paths belong to the research tools.\nThe user has approved only the scope and report paths in that plan plus the skill's normal shared learning index at /workspace/reports/index.md.`;
     console.log(`Evaluating ${scenario.id}; artifacts: ${output}`);
     const child = spawn('codex', args, { stdio: ['pipe', 'pipe', 'pipe'] });
     const timer = setTimeout(() => child.kill('SIGTERM'), 180_000);

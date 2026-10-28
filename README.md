@@ -85,6 +85,8 @@ The repository report covers the skill list and shared design ideas. Each skill'
 
 Each report type uses consistent headings in a fixed order, so you can find usage, history, design, and applications in the same place when comparing skills.
 
+After repository analysis completes, the agent updates `reports/index.md` with design ideas, application conditions, source reports, research dates, and analyzed commits. The index path is proposed before approval. Rows from other reports are preserved, and index changes do not affect analysis resume decisions. Older reports are imported only when explicitly selected; they are not discovered automatically. Do not update the shared index concurrently.
+
 ## Resume or repeat research
 
 Pass the same URL again to research unfinished skills and those affected by source or shared-reference changes. If only the pull request and issue index changes, completed report content is retained, and `discussion_updates` plus a warning identify unverified discussion updates. The warning persists until explicit research completes. Use `--refresh` to research the selected scope and incorporate discussions. The full index is still acquired.
