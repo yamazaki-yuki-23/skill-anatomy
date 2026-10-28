@@ -1,7 +1,7 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { digest, sorted, sourceSignature } from './fingerprint.js';
 import { inside, readJson, writeJson, withStateLock } from './storage.js';
-import type { Plan, State } from './types.js';
+import type { Plan, Progress, State } from './types.js';
 export const VERSION = 2;
 export function timestamp(): string {
   return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
@@ -32,6 +32,39 @@ export function approve(planFile: string): unknown {
     plan.confirmation = 'user-approved';
     writeJson(planFile, plan);
     return { approved: true, plan_file: planFile };
+  });
+}
+export function status(planFile: string): Progress {
+  return withActivePlan(planFile, ({ plan, state }) => {
+    const selected = plan.skills.filter((entry) => entry.selected);
+    const skills = selected.map((entry) => ({
+      skill: entry.skill,
+      report: entry.report,
+      status: state.skills[entry.skill]?.status ?? 'pending',
+    }));
+    const done = skills.filter((entry) => entry.status === 'done').length;
+    const report = inside(plan.destination, 'repository-analysis.md');
+    const recorded = state.repository;
+    const repositoryDone =
+      done === skills.length &&
+      recorded !== null &&
+      typeof recorded === 'object' &&
+      'commit' in recorded &&
+      recorded.commit === plan.commit &&
+      'scope' in recorded &&
+      recorded.scope === plan.scope &&
+      'skills' in recorded &&
+      Array.isArray(recorded.skills) &&
+      digest(recorded.skills) === digest(selected.map((entry) => entry.skill)) &&
+      'report_hash' in recorded &&
+      existsSync(report) &&
+      recorded.report_hash === digest(readFileSync(report, 'utf8'));
+    return {
+      skills,
+      repository: { report, status: repositoryDone ? 'done' : 'pending' },
+      done,
+      total: skills.length,
+    };
   });
 }
 function withActivePlan<T>(
@@ -101,6 +134,7 @@ export function complete(
         dependencies: uniqueDependencies,
         report_hash: digest(text),
       });
+      state.repository = null;
     }
     writeJson(plan.state_file, state);
     return {

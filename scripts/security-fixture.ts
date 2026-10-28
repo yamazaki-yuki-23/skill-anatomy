@@ -82,6 +82,7 @@ export class ResearchFixture {
   output?: string;
   trace: TraceEntry[];
   writes: Record<string, string>;
+  repositoryContent?: string;
   sources: Record<string, string>;
   comments: { user: { login: string }; body: string }[];
   plan: FixturePlan;
@@ -236,11 +237,32 @@ export class ResearchFixture {
       if (input !== '/plan.json') return this.deny('Unapproved plan');
       if (operation === 'approve' && !flags.length)
         return { approved: true, already_approved: true };
+      if (operation === 'status' && !flags.length) {
+        const skills = this.plan.skills
+          .filter((entry) => entry.selected)
+          .map((entry) => ({
+            skill: entry.skill,
+            report: entry.report,
+            status: this.progress(entry.skill).status,
+          }));
+        const done = skills.filter((entry) => entry.status === 'done').length;
+        const repositoryDone =
+          done === skills.length &&
+          this.state.repository !== null &&
+          this.repositoryContent === this.writes[overview];
+        return {
+          skills,
+          repository: { report: overview, status: repositoryDone ? 'done' : 'pending' },
+          done,
+          total: skills.length,
+        };
+      }
       if (operation === 'complete') {
         if (flags[0] === '--repository' && flags.length === 1) {
           assert.equal(this.progress(skill).status, 'done', 'Individual report is incomplete');
           assert.ok(this.writes[overview]?.trim(), 'Repository report is missing');
           this.state.repository = { commit, scope: this.plan.scope, skills: [skill] };
+          this.repositoryContent = this.writes[overview];
           return { saved: overview, done: 1, total: 1 };
         }
         if (flags[0] !== '--skill' || flags[1] !== skill)
@@ -256,6 +278,8 @@ export class ResearchFixture {
         }
         assert.ok(this.writes[report]?.trim(), 'Skill report is missing');
         this.progress(skill).status = 'done';
+        this.state.repository = null;
+        this.repositoryContent = undefined;
         return { saved: report, done: 1, total: 1 };
       }
     }
