@@ -62,7 +62,8 @@ pre {
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 1rem 1.1rem;
-  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   line-height: 1.6;
 }
 pre code { background: none; padding: 0; font-size: 0.88rem; }
@@ -102,6 +103,7 @@ pre code { background: none; padding: 0; font-size: 0.88rem; }
 }
 .toc-title { margin: 0 0 0.4rem; font-size: 0.8rem; font-weight: 700; color: var(--muted); letter-spacing: 0.06em; }
 .toc ol { margin: 0; padding-left: 1.3rem; line-height: 1.7; }
+.toc ol ol { list-style: none; padding-left: 0.9rem; margin: 0.1rem 0 0.4rem; font-size: 0.9rem; line-height: 1.6; }
 .toc a { text-decoration: none; }
 .toc a:hover { text-decoration: underline; }
 main { min-width: 0; }
@@ -122,12 +124,17 @@ h2 {
 }
 h3 { margin: 1.8rem 0 0.6rem; font-size: 1.08rem; }
 p, ul, ol { margin: 0 0 1rem; }
+p, li, td, dd, a { overflow-wrap: anywhere; }
+blockquote { margin: 0 0 1rem; padding: 0.2rem 0 0.2rem 1rem; border-left: 3px solid var(--line); color: var(--muted); }
+blockquote > :last-child { margin-bottom: 0; }
 li { margin-bottom: 0.25rem; }
 table { width: 100%; border-collapse: collapse; margin: 0 0 1.2rem; font-size: 0.95rem; }
 .table-wrap { overflow-x: auto; margin: 0 0 1.2rem; }
-.table-wrap table { margin: 0; min-width: 32rem; }
+.table-wrap table { margin: 0; }
 th, td { border: 1px solid var(--line); padding: 0.55rem 0.7rem; text-align: left; vertical-align: top; }
-th { background: var(--surface-2); font-weight: 600; white-space: nowrap; }
+th { background: var(--surface-2); font-weight: 600; }
+tbody th { white-space: nowrap; }
+td:first-child, th:first-child { min-width: 7rem; }
 .status { display: inline-block; padding: 0.05em 0.6em; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 0.85em; font-weight: 600; }
 .note {
   background: var(--note-bg);
@@ -144,7 +151,7 @@ th { background: var(--surface-2); font-weight: 600; white-space: nowrap; }
 footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: center; }
 @media (min-width: 64rem) {
   .layout { grid-template-columns: 15rem minmax(0, 1fr); }
-  .toc { position: sticky; top: 1.5rem; }
+  .toc { position: sticky; top: 1.5rem; max-height: calc(100vh - 3rem); overflow-y: auto; }
 }
 @media print {
   body { background: #fff; color: #000; }
@@ -159,10 +166,10 @@ footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: 
 <header class="hero">
   <p class="eyebrow">Skill anatomy</p>
   <h1>{{所有者}}/{{リポジトリ名}} の全体分析</h1>
-  <p class="lead">{{対象の目的を1〜2文で示す。Markdown版の概要章の冒頭と同じ内容にする}}</p>
+  <p class="lead">{{対象の目的を1文で示す。Markdown版の概要章の冒頭の文と同じ内容にする}}</p>
   <dl class="facts">
     <div><dt>元URL</dt><dd><a href="{{リポジトリへのリンク}}">{{所有者/リポジトリ名}}</a></dd></div>
-    <div><dt>分析コミット</dt><dd><code>{{今回の固定コミット}}</code></dd></div>
+    <div><dt>分析コミット</dt><dd><code>{{今回の固定コミットの先頭12桁}}</code></dd></div>
     <div><dt>調査日</dt><dd>{{YYYY-MM-DD}}</dd></div>
     <div><dt>分析状況</dt><dd>完了 {{件数}} / 未完了 {{件数}}</dd></div>
   </dl>
@@ -181,7 +188,7 @@ footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: 
 <main>
 <section id="overview">
   <h2>概要</h2>
-  {{Markdown版の同じ章の本文。分析状況と対象範囲の文も含める}}
+  {{Markdown版の同じ章の本文。分析状況と対象範囲の文も含める。### の小見出しがある章は<h3 id="overview-1">のようにidを付け、目次に入れ子で載せる}}
 </section>
 <section id="skills">
   <h2>スキル一覧</h2>
