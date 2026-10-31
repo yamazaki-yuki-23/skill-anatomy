@@ -62,7 +62,8 @@ pre {
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 1rem 1.1rem;
-  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   line-height: 1.6;
 }
 pre code { background: none; padding: 0; font-size: 0.88rem; }
@@ -102,6 +103,7 @@ pre code { background: none; padding: 0; font-size: 0.88rem; }
 }
 .toc-title { margin: 0 0 0.4rem; font-size: 0.8rem; font-weight: 700; color: var(--muted); letter-spacing: 0.06em; }
 .toc ol { margin: 0; padding-left: 1.3rem; line-height: 1.7; }
+.toc ol ol { list-style: none; padding-left: 0.9rem; margin: 0.1rem 0 0.4rem; font-size: 0.9rem; line-height: 1.6; }
 .toc a { text-decoration: none; }
 .toc a:hover { text-decoration: underline; }
 main { min-width: 0; }
@@ -123,12 +125,17 @@ h2 {
 h3 { margin: 1.8rem 0 0.6rem; font-size: 1.08rem; }
 h4 { margin: 1.4rem 0 0.4rem; font-size: 1rem; }
 p, ul, ol { margin: 0 0 1rem; }
+p, li, td, dd, a { overflow-wrap: anywhere; }
+blockquote { margin: 0 0 1rem; padding: 0.2rem 0 0.2rem 1rem; border-left: 3px solid var(--line); color: var(--muted); }
+blockquote > :last-child { margin-bottom: 0; }
 li { margin-bottom: 0.25rem; }
 table { width: 100%; border-collapse: collapse; margin: 0 0 1.2rem; font-size: 0.95rem; }
 .table-wrap { overflow-x: auto; margin: 0 0 1.2rem; }
-.table-wrap table { margin: 0; min-width: 32rem; }
+.table-wrap table { margin: 0; }
 th, td { border: 1px solid var(--line); padding: 0.55rem 0.7rem; text-align: left; vertical-align: top; }
-th { background: var(--surface-2); font-weight: 600; white-space: nowrap; }
+th { background: var(--surface-2); font-weight: 600; }
+tbody th { white-space: nowrap; }
+td:first-child, th:first-child { min-width: 7rem; }
 .note {
   background: var(--note-bg);
   border-left: 4px solid var(--note-line);
@@ -145,7 +152,7 @@ th { background: var(--surface-2); font-weight: 600; white-space: nowrap; }
 footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: center; }
 @media (min-width: 64rem) {
   .layout { grid-template-columns: 15rem minmax(0, 1fr); }
-  .toc { position: sticky; top: 1.5rem; }
+  .toc { position: sticky; top: 1.5rem; max-height: calc(100vh - 3rem); overflow-y: auto; }
 }
 @media print {
   body { background: #fff; color: #000; }
@@ -160,10 +167,10 @@ footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: 
 <header class="hero">
   <p class="eyebrow">Skill anatomy</p>
   <h1>{{スキル名}} の分析</h1>
-  <p class="lead">{{役割と学べる設計を1〜2文で示す。Markdown版の概要章の冒頭と同じ内容にする}}</p>
+  <p class="lead">{{学べる設計を1文で示す。Markdown版の概要章にある「学べるのは……」の文と同じ内容にする}}</p>
   <dl class="facts">
     <div><dt>元URL</dt><dd><a href="{{対象スキルへのリンク}}">{{所有者/リポジトリ/パス}}</a></dd></div>
-    <div><dt>分析コミット</dt><dd><code>{{固定コミット}}</code></dd></div>
+    <div><dt>分析コミット</dt><dd><code>{{固定コミットの先頭12桁}}</code></dd></div>
     <div><dt>調査日</dt><dd>{{YYYY-MM-DD}}</dd></div>
   </dl>
 </header>
@@ -174,7 +181,11 @@ footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: 
     <li><a href="#overview">概要と使い方</a></li>
     <li><a href="#flow">仕組みと処理の流れ</a></li>
     <li><a href="#history">作成・変更の経緯</a></li>
-    <li><a href="#design">設計判断と学べること</a></li>
+    <li><a href="#design">設計判断と学べること</a>
+      <ol>
+        <li><a href="#design-1">{{小見出しの名称。### の小見出しがある章は、どの章でもこの形で入れ子にし、小見出しの id と合わせる}}</a></li>
+      </ol>
+    </li>
     <li><a href="#application">自作スキルへの応用</a></li>
     <li><a href="#sources">調査範囲と出典</a></li>
   </ol>
@@ -186,7 +197,7 @@ footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: 
 </section>
 <section id="flow">
   <h2>仕組みと処理の流れ</h2>
-  {{Markdown版の同じ章の本文。処理の流れを図にする場合は<figure class="figure">にインラインSVGと<figcaption>を置き、本文の説明を置き換えずに補う}}
+  {{Markdown版の同じ章の本文。処理の流れを図にする場合は、この章に1つだけ<figure class="figure">でインラインSVGと<figcaption>を置き、本文の説明を置き換えずに補う。引用は<blockquote>}}
 </section>
 <section id="history">
   <h2>作成・変更の経緯</h2>
@@ -194,7 +205,7 @@ footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: 
 </section>
 <section id="design">
   <h2>設計判断と学べること</h2>
-  {{Markdown版の同じ章の本文。小見出しは<h3>。読み手が見落とすと誤解する条件は<div class="note">で囲んでよい}}
+  {{Markdown版の同じ章の本文。小見出しは<h3 id="design-1">のように章のidと連番でidを付け、目次の入れ子に載せる。読み手が見落とすと誤解する条件は<div class="note">で囲んでよい（1章に1つまで）}}
 </section>
 <section id="application">
   <h2>自作スキルへの応用</h2>
