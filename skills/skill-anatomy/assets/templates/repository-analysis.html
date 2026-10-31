@@ -167,7 +167,13 @@ th, td { padding: 0.6rem 0.8rem; text-align: left; vertical-align: top; border: 
 thead th { background: var(--yellow); color: #2b2d42; font-weight: 800; }
 tbody th { white-space: nowrap; font-weight: 700; }
 td:first-child, th:first-child { min-width: 7rem; }
-.status { display: inline-block; padding: 0.05em 0.7em; border-radius: 999px; border: 2px solid var(--ink); font-size: 0.85em; font-weight: 700; }
+.status { display: inline-block; padding: 0.05em 0.7em; border-radius: 999px; border: 2px solid var(--ink); color: #2b2d42; font-size: 0.85em; font-weight: 700; white-space: nowrap; }
+.status.done { background: var(--mint); }
+.status.pending { background: var(--yellow); }
+.status.skipped { background: transparent; color: var(--muted); border-style: dashed; }
+.alt { display: inline-block; margin-left: 0.4em; padding: 0 0.55em; border: 2px solid var(--link); border-radius: 999px; font-size: 0.8em; font-weight: 700; text-decoration: none; white-space: nowrap; }
+#skills table { min-width: 44rem; }
+#skills td:nth-child(4), #skills td:nth-child(5) { white-space: nowrap; }
 .note { background: var(--surface); border: 2px dashed var(--pink); border-radius: 12px; padding: 0.9rem 1.1rem; margin: 1.2rem 0; }
 .note > :last-child { margin-bottom: 0; }
 .figure { margin: 1.4rem 0; }
@@ -232,7 +238,7 @@ footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: 
   <table>
     <thead><tr><th>スキル</th><th>元のパス</th><th>役割</th><th>分析状況</th><th>個別分析</th></tr></thead>
     <tbody>
-      <tr><td>{{名前}}</td><td><code>{{パス}}</code></td><td>{{短い説明}}</td><td><span class="status">{{完了・未完了・対象外}}</span></td><td>{{個別レポートへの相対リンク。Markdown版と同じ.mdへのリンクに加え、隣に.htmlがあればそのリンクも置く。未作成なら「未作成」}}</td></tr>
+      <tr><td>{{名前}}</td><td><code>{{パス}}</code></td><td>{{短い説明}}</td><td><span class="status done">{{完了・未完了・対象外。classは順に done・pending・skipped}}</span></td><td>{{Markdown版と同じ.mdへの相対リンク。隣に.htmlがあれば <a class="alt" href="同名.html">HTML版</a> を続けて置く。未作成なら「未作成」}}</td></tr>
     </tbody>
   </table>
   </div>
