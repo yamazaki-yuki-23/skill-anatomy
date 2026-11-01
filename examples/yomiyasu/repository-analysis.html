@@ -1,0 +1,215 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark"><title>nanaism/yomiyasu の全体分析</title><style>
+:root {
+  color-scheme: light dark;
+  --bg: #fffdf7;
+  --grid: #d9d4c4;
+  --surface: #ffffff;
+  --ink: #2b2d42;
+  --text: #2b2d42;
+  --muted: #6b6f80;
+  --line: #e6e2d6;
+  --code-bg: #f4f1e8;
+  --yellow: #ffe066;
+  --pink: #ffa3bf;
+  --blue: #2457f5;
+  --mint: #8fe3d2;
+  --link: #1d4ed8;
+  --shadow-ink: #2b2d42;
+  --accent: #2457f5;
+  --accent-soft: #dfe7ff;
+  --surface-2: #f4f1e8;
+  --content: 44rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1d26;
+    --grid: #343647;
+    --surface: #262837;
+    --ink: #eceef5;
+    --text: #e6e8f0;
+    --muted: #a3a8ba;
+    --line: #3d4052;
+    --code-bg: #2f3243;
+    --link: #8fb6ff;
+    --shadow-ink: #0f1016;
+    --accent: #8fb6ff;
+    --accent-soft: #2d3a66;
+    --surface-2: #2f3243;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 1.5rem; }
+body {
+  margin: 0;
+  color: var(--text);
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--grid) 1.2px, transparent 1.3px);
+  background-size: 22px 22px;
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "BIZ UDPGothic", Meiryo, "Noto Sans JP", sans-serif;
+  font-size: 1rem;
+  line-height: 1.9;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4, .eyebrow, .toc-title {
+  font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", Meiryo, "Noto Sans JP", sans-serif;
+  font-weight: 800;
+}
+a { color: var(--link); text-decoration-thickness: 2px; text-underline-offset: 0.2em; }
+code, pre, kbd { font-family: ui-monospace, "SFMono-Regular", Menlo, "BIZ UDGothic", Consolas, "Noto Sans Mono CJK JP", monospace; font-size: 0.92em; }
+code { background: var(--code-bg); padding: 0.1em 0.4em; border-radius: 6px; overflow-wrap: anywhere; }
+pre {
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+  box-shadow: 4px 4px 0 var(--shadow-ink);
+}
+pre code { background: none; padding: 0; font-size: 0.88rem; }
+.page { max-width: calc(var(--content) + 20rem); margin: 0 auto; padding: clamp(1rem, 3vw, 2.5rem) 16px 4rem; }
+.hero {
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 18px;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  margin-bottom: 2rem;
+  box-shadow: 8px 8px 0 var(--yellow);
+}
+.eyebrow {
+  display: table;
+  margin: 0 0 1rem;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 0.95rem;
+  padding: 0.15em 0.8em;
+  border-radius: 999px;
+  transform: none;
+}
+.hero h1 {
+  display: inline;
+  margin: 0;
+  font-size: clamp(1.9rem, 5vw, 3rem);
+  line-height: 1.3;
+  background: linear-gradient(transparent 58%, var(--yellow) 58%);
+  padding: 0 0.1em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+@media (prefers-color-scheme: dark) { .hero h1 { color: #fff; background: linear-gradient(transparent 58%, #8a6d00 58%); } }
+.lead { margin: 1.3rem 0 1.6rem; font-size: 1.08rem; max-width: 36rem; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0.8rem; margin: 0; }
+.facts div { border: 2px dashed var(--line); border-radius: 12px; padding: 0.6rem 0.9rem; background: var(--surface); }
+.facts dt { font-size: 0.78rem; color: var(--muted); font-weight: 700; }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.layout { display: grid; grid-template-columns: 1fr; gap: 1.6rem; align-items: start; }
+.toc {
+  background: #fff4c2;
+  color: #2b2d42;
+  padding: 1rem 1.1rem 1.2rem;
+  border-radius: 4px;
+  box-shadow: 3px 5px 10px rgba(43, 45, 66, 0.18);
+  transform: none;
+}
+.toc-title { margin: 0 0 0.4rem; font-size: 0.9rem; }
+.toc ol { margin: 0; padding-left: 1.3rem; line-height: 1.7; }
+.toc ol ol { list-style: none; padding-left: 0.8rem; margin: 0.1rem 0 0.4rem; font-size: 0.9rem; line-height: 1.55; }
+.toc ol ol li::before { content: "・"; color: #6b6f80; }
+.toc a { color: #2b2d42; text-decoration: none; border-bottom: 2px solid transparent; }
+.toc a:hover { border-bottom-color: #2b2d42; }
+main { min-width: 0; }
+section {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: clamp(1.2rem, 3vw, 2.2rem);
+  margin-bottom: 1.8rem;
+}
+h2 {
+  display: table;
+  margin: -2.4rem 0 1.2rem -0.4rem;
+  font-size: 1.3rem;
+  line-height: 1.3;
+  color: #2b2d42;
+  background: var(--sticker, var(--pink));
+  padding: 0.3em 0.9em;
+  border-radius: 8px;
+  transform: none;
+  box-shadow: 0 1px 3px rgba(43, 45, 66, 0.12);
+}
+h3 {
+  display: table;
+  margin: 1.8rem 0 0.6rem;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  background: linear-gradient(transparent 60%, var(--pink) 60%);
+  padding: 0 0.15em;
+}
+@media (prefers-color-scheme: dark) { h3 { background: linear-gradient(transparent 60%, #7a2d47 60%); } }
+h4 { margin: 1.4rem 0 0.4rem; font-size: 1rem; }
+p, ul, ol { margin: 0 0 1rem; }
+li { margin-bottom: 0.3rem; }
+p, li, td, dd, a { overflow-wrap: anywhere; }
+blockquote { margin: 0 0 1rem; padding: 0.3rem 0 0.3rem 1rem; border-left: 4px solid var(--line); color: var(--muted); }
+blockquote > :last-child { margin-bottom: 0; }
+table { width: 100%; border-collapse: collapse; margin: 0 0 1.2rem; font-size: 0.95rem; }
+.table-wrap { overflow-x: auto; margin: 0 0 1.2rem; }
+.table-wrap table { margin: 0; }
+th, td { padding: 0.6rem 0.8rem; text-align: left; vertical-align: top; border: 2px solid var(--ink); }
+thead th { background: var(--yellow); color: #2b2d42; font-weight: 800; }
+tbody th { white-space: nowrap; font-weight: 700; }
+td:first-child, th:first-child { min-width: 7rem; }
+.status { display: inline-block; padding: 0.05em 0.7em; border-radius: 999px; border: 2px solid var(--ink); color: #2b2d42; font-size: 0.85em; font-weight: 700; white-space: nowrap; }
+.status.done { background: var(--mint); }
+.status.pending { background: var(--yellow); }
+.status.skipped { background: transparent; color: var(--muted); border-style: dashed; }
+.alt { display: inline-block; margin-left: 0.4em; padding: 0 0.55em; border: 2px solid var(--link); border-radius: 999px; font-size: 0.8em; font-weight: 700; text-decoration: none; white-space: nowrap; }
+#skills table { min-width: 44rem; }
+#skills td:nth-child(4), #skills td:nth-child(5) { white-space: nowrap; }
+.note { background: var(--surface); border: 2px dashed var(--pink); border-radius: 12px; padding: 0.9rem 1.1rem; margin: 1.2rem 0; }
+.note > :last-child { margin-bottom: 0; }
+.figure { margin: 1.4rem 0; }
+.figure svg { display: block; max-width: 100%; height: auto; }
+.figure figcaption { margin-top: 0.5rem; font-size: 0.9rem; color: var(--muted); }
+.source { font-size: 0.88rem; color: var(--muted); }
+.sources-list { padding-left: 1.3rem; font-size: 0.95rem; }
+footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: center; }
+@media (min-width: 64rem) {
+  .layout { grid-template-columns: 15rem minmax(0, 1fr); }
+  .toc { position: sticky; top: 1.5rem; max-height: calc(100vh - 3rem); overflow-y: auto; }
+}
+@media print {
+  body { background: #fff; color: #000; }
+  .hero, section, pre { box-shadow: none; border-color: #444; }
+  .toc { display: none; }
+  .eyebrow, h2 { transform: none; box-shadow: none; }
+  a { color: inherit; }
+}
+#overview { --sticker: var(--pink); }
+#skills { --sticker: var(--blue); }
+#skills h2 { color: #fff; }
+#relations { --sticker: var(--mint); }
+#learning { --sticker: var(--ink); }
+#learning h2 { color: var(--surface); }
+#sources { --sticker: var(--surface); }
+#sources h2 { color: var(--ink); border: 1px solid var(--line); }
+
+.report-details { margin: 1rem 0; border: 1px solid var(--line); border-radius: 8px; padding: 0.7rem 1rem; }
+.report-details summary { cursor: pointer; color: var(--link); font-weight: 600; }
+.report-details[open] summary { margin-bottom: 0.8rem; }
+.report-details summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+</style></head><body><div class="page"><header class="hero"><p class="eyebrow">Skill anatomy</p><h1>nanaism/yomiyasu の全体分析</h1><p class="lead">意味を保ちながら文章を直す、1スキルの分析です。</p><dl class="facts"><div><dt>元URL</dt><dd><a href="https://github.com/nanaism/yomiyasu">nanaism/yomiyasu</a></dd></div><div><dt>分析コミット</dt><dd><code>29d67ccb05e3</code></dd></div><div><dt>調査日</dt><dd>2026-11-01</dd></div></dl></header><div class="layout"><nav class="toc" aria-label="目次"><p class="toc-title">目次</p><ol><li><a href="#overview">概要</a></li><li><a href="#skills">スキル一覧</a></li><li><a href="#relations">スキル同士の関係</a></li><li><a href="#learning">共通する設計と学び</a></li><li><a href="#sources">調査範囲と出典</a></li></ol></nav><main><section id="overview"><h2>概要</h2><p>AIが書いた日本語を、意味を保ちながら読みやすく直すスキルです。文章の直し方、用途別の参照資料、表現と変更箇所を調べるPythonのコードをまとめています。<a href="https://github.com/nanaism/yomiyasu/blob/29d67ccb05e370b5958d72920a9cd1aa829dee80/skills/yomiyasu/SKILL.md">構成と使い方</a>が入口です。</p>
+<p>分析状況：完了 1 / 未完了 0。対象範囲：リポジトリ内で検出した1スキル。関連資料・コード・履歴を調べ、全テストや全評価結果の検証は対象外です。</p>
+</section><section id="skills"><h2>スキル一覧</h2><div class="table-wrap"><table>
+<thead>
+<tr><th>スキル</th><th>元のパス</th><th>役割</th><th>分析状況</th><th>個別分析</th></tr>
+</thead>
+<tbody>
+<tr><td>yomiyasu</td><td><code>skills/yomiyasu/SKILL.md</code></td><td>日本語の推敲と変更前後の確認</td><td><span class="status done">完了</span></td><td><a href="skill-analyses/yomiyasu.md">分析レポート</a>・<a class="alt" href="skill-analyses/yomiyasu.html">HTML版</a></td></tr>
+</tbody>
+</table></div>
+</section><section id="relations"><h2>スキル同士の関係</h2><p>対象は1スキルです。参照資料と検査コードの役割は、<a href="skill-analyses/yomiyasu.md#%E4%BB%95%E7%B5%84%E3%81%BF%E3%81%A8%E5%87%A6%E7%90%86%E3%81%AE%E6%B5%81%E3%82%8C">個別分析の処理の流れ</a>を参照してください。</p>
+</section><section id="learning"><h2>共通する設計と学び</h2><p><a href="skill-analyses/yomiyasu.md#%E8%A8%AD%E8%A8%88%E5%88%A4%E6%96%AD%E3%81%A8%E5%AD%A6%E3%81%B9%E3%82%8B%E3%81%93%E3%81%A8">残す意味の確認と提出前の照合</a>、<a href="skill-analyses/yomiyasu.md#%E8%87%AA%E4%BD%9C%E3%82%B9%E3%82%AD%E3%83%AB%E3%81%B8%E3%81%AE%E5%BF%9C%E7%94%A8">会議メモの要約への応用</a>にまとめています。</p>
+</section><section id="sources"><h2>調査範囲と出典</h2><div class="table-wrap"><table><thead><tr><th>項目</th><th>内容</th></tr></thead><tbody><tr><td>元URL</td><td><a href="https://github.com/nanaism/yomiyasu">nanaism/yomiyasu</a></td></tr><tr><td>分析コミット</td><td><code>29d67ccb05e370b5958d72920a9cd1aa829dee80</code></td></tr><tr><td>調査日</td><td>2026-11-01</td></tr><tr><td>実行検証</td><td>なし</td></tr></tbody></table></div><details class="report-details"><summary>詳しい調査記録を見る</summary><div class="table-wrap"><table><thead><tr><th>項目</th><th>内容</th></tr></thead><tbody><tr><td>調査範囲</td><td>スキルの指示、参照資料の関連箇所、検査・記録・照合のコード、関連テストと評価資料、Git履歴、関連Issue・PR。詳細は<a href="skill-analyses/yomiyasu.md#%E8%AA%BF%E6%9F%BB%E7%AF%84%E5%9B%B2%E3%81%A8%E5%87%BA%E5%85%B8">個別分析</a>。</td></tr><tr><td>未確認の範囲</td><td>全コード・全テストの網羅的確認、非公開の評価環境、利用環境ごとの動作。</td></tr></tbody></table></div>
+</details></section></main></div><footer>Skill anatomyの分析。本文と出典は<a href="repository-analysis.md">Markdown版</a>にも保存しています。</footer></div></body></html>

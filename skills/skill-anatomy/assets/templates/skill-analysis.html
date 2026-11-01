@@ -92,7 +92,7 @@ pre code { background: none; padding: 0; font-size: 0.88rem; }
   font-size: 0.95rem;
   padding: 0.15em 0.8em;
   border-radius: 999px;
-  transform: rotate(-2deg);
+  transform: none;
 }
 .hero h1 {
   display: inline;
@@ -112,12 +112,12 @@ pre code { background: none; padding: 0; font-size: 0.88rem; }
 .facts dd { margin: 0; overflow-wrap: anywhere; }
 .layout { display: grid; grid-template-columns: 1fr; gap: 1.6rem; align-items: start; }
 .toc {
-  background: var(--yellow);
+  background: #fff4c2;
   color: #2b2d42;
   padding: 1rem 1.1rem 1.2rem;
   border-radius: 4px;
   box-shadow: 3px 5px 10px rgba(43, 45, 66, 0.18);
-  transform: rotate(-1deg);
+  transform: none;
 }
 .toc-title { margin: 0 0 0.4rem; font-size: 0.9rem; }
 .toc ol { margin: 0; padding-left: 1.3rem; line-height: 1.7; }
@@ -128,7 +128,7 @@ pre code { background: none; padding: 0; font-size: 0.88rem; }
 main { min-width: 0; }
 section {
   background: var(--surface);
-  border: 2px solid var(--ink);
+  border: 1px solid var(--line);
   border-radius: 14px;
   padding: clamp(1.2rem, 3vw, 2.2rem);
   margin-bottom: 1.8rem;
@@ -142,8 +142,8 @@ h2 {
   background: var(--sticker, var(--pink));
   padding: 0.3em 0.9em;
   border-radius: 8px;
-  transform: rotate(-1.5deg);
-  box-shadow: 3px 3px 0 var(--shadow-ink);
+  transform: none;
+  box-shadow: 0 1px 3px rgba(43, 45, 66, 0.12);
 }
 h3 {
   display: table;
@@ -195,7 +195,12 @@ footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: 
 #design h2 { color: var(--surface); }
 #application { --sticker: var(--yellow); }
 #sources { --sticker: var(--surface); }
-#sources h2 { color: var(--ink); border: 2px solid var(--ink); }
+#sources h2 { color: var(--ink); border: 1px solid var(--line); }
+
+.report-details { margin: 1rem 0; border: 1px solid var(--line); border-radius: 8px; padding: 0.7rem 1rem; }
+.report-details summary { cursor: pointer; color: var(--link); font-weight: 600; }
+.report-details[open] summary { margin-bottom: 0.8rem; }
+.report-details summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 </style>
 </head>
 <body>
@@ -203,7 +208,7 @@ footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: 
 <header class="hero">
   <p class="eyebrow">Skill anatomy</p>
   <h1>{{スキル名}} の分析</h1>
-  <p class="lead">{{学べる設計を1文で示す。Markdown版の概要章にある「学べるのは……」の文と同じ内容にする}}</p>
+  <p class="lead">{{学べる設計を1文で示す。Markdown版の概要章にある「学べるのは……」の文と同じ内容にする。強調記号は付けない}}</p>
   <dl class="facts">
     <div><dt>元URL</dt><dd><a href="{{対象スキルへのリンク}}">{{所有者/リポジトリ/パス}}</a></dd></div>
     <div><dt>分析コミット</dt><dd><code>{{固定コミットの先頭12桁}}</code></dd></div>
@@ -233,7 +238,7 @@ footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: 
 </section>
 <section id="flow">
   <h2>仕組みと処理の流れ</h2>
-  {{Markdown版の同じ章の本文。処理の流れを図にする場合は、この章に1つだけ<figure class="figure">でインラインSVGと<figcaption>を置き、本文の説明を置き換えずに補う。引用は<blockquote>}}
+  {{Markdown版の同じ章の本文。引用は<blockquote>。Markdown版に流れの図があれば、この章に1つだけ<figure class="figure">でインラインSVG（width="100%"、位置と幅は%指定、高さは工程数に合わせる。6工程なら330px・文字16px）と<figcaption>を置く。図を置いたときだけ、図と重なる手順の説明と出典を<details class="report-details"><summary>手順の詳しい説明を見る</summary>…</details>に入れ、open属性を付けずに閉じておく。図がなければ折りたたまない}}
 </section>
 <section id="history">
   <h2>作成・変更の経緯</h2>
@@ -256,13 +261,23 @@ footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: 
       <tr><th>元URL</th><td><a href="{{対象スキルへのリンク}}">{{対象スキルへのリンク}}</a></td></tr>
       <tr><th>分析コミット</th><td><code>{{固定コミット}}</code></td></tr>
       <tr><th>調査日</th><td>{{YYYY-MM-DD}}</td></tr>
-      <tr><th>調査範囲</th><td>{{読んだファイル・履歴・PR・Issue}}</td></tr>
-      <tr><th>未確認の範囲</th><td>{{取得できなかった情報と調べていない範囲}}</td></tr>
       <tr><th>実行検証</th><td>なし</td></tr>
     </tbody>
   </table>
   </div>
-  {{根拠のリンク一覧を<ul class="sources-list">で置く。引用があれば必要な帰属・ライセンス表示を添える}}
+  <details class="report-details">
+    <summary>詳しい調査記録を見る</summary>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>項目</th><th>内容</th></tr></thead>
+      <tbody>
+        <tr><th>調査範囲</th><td>{{読んだファイル・履歴・PR・Issue}}</td></tr>
+        <tr><th>未確認の範囲</th><td>{{取得できなかった情報と調べていない範囲}}</td></tr>
+      </tbody>
+    </table>
+    </div>
+    {{Markdown版の調査記録にある補足の段落と、根拠のリンク一覧（<ul class="sources-list">）。引用があれば必要な帰属・ライセンス表示を添える。結論に影響する制約は本文の該当箇所にも書いてあること}}
+  </details>
 </section>
 </main>
 </div>

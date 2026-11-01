@@ -92,7 +92,7 @@ pre code { background: none; padding: 0; font-size: 0.88rem; }
   font-size: 0.95rem;
   padding: 0.15em 0.8em;
   border-radius: 999px;
-  transform: rotate(-2deg);
+  transform: none;
 }
 .hero h1 {
   display: inline;
@@ -112,12 +112,12 @@ pre code { background: none; padding: 0; font-size: 0.88rem; }
 .facts dd { margin: 0; overflow-wrap: anywhere; }
 .layout { display: grid; grid-template-columns: 1fr; gap: 1.6rem; align-items: start; }
 .toc {
-  background: var(--yellow);
+  background: #fff4c2;
   color: #2b2d42;
   padding: 1rem 1.1rem 1.2rem;
   border-radius: 4px;
   box-shadow: 3px 5px 10px rgba(43, 45, 66, 0.18);
-  transform: rotate(-1deg);
+  transform: none;
 }
 .toc-title { margin: 0 0 0.4rem; font-size: 0.9rem; }
 .toc ol { margin: 0; padding-left: 1.3rem; line-height: 1.7; }
@@ -128,7 +128,7 @@ pre code { background: none; padding: 0; font-size: 0.88rem; }
 main { min-width: 0; }
 section {
   background: var(--surface);
-  border: 2px solid var(--ink);
+  border: 1px solid var(--line);
   border-radius: 14px;
   padding: clamp(1.2rem, 3vw, 2.2rem);
   margin-bottom: 1.8rem;
@@ -142,8 +142,8 @@ h2 {
   background: var(--sticker, var(--pink));
   padding: 0.3em 0.9em;
   border-radius: 8px;
-  transform: rotate(-1.5deg);
-  box-shadow: 3px 3px 0 var(--shadow-ink);
+  transform: none;
+  box-shadow: 0 1px 3px rgba(43, 45, 66, 0.12);
 }
 h3 {
   display: table;
@@ -200,7 +200,12 @@ footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: 
 #learning { --sticker: var(--ink); }
 #learning h2 { color: var(--surface); }
 #sources { --sticker: var(--surface); }
-#sources h2 { color: var(--ink); border: 2px solid var(--ink); }
+#sources h2 { color: var(--ink); border: 1px solid var(--line); }
+
+.report-details { margin: 1rem 0; border: 1px solid var(--line); border-radius: 8px; padding: 0.7rem 1rem; }
+.report-details summary { cursor: pointer; color: var(--link); font-weight: 600; }
+.report-details[open] summary { margin-bottom: 0.8rem; }
+.report-details summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 </style>
 </head>
 <body>
@@ -260,13 +265,23 @@ footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: 
       <tr><th>元URL</th><td><a href="{{リポジトリへのリンク}}">{{リポジトリへのリンク}}</a></td></tr>
       <tr><th>分析コミット</th><td><code>{{今回の固定コミット}}</code></td></tr>
       <tr><th>調査日</th><td>{{YYYY-MM-DD}}</td></tr>
-      <tr><th>調査範囲</th><td>{{読んだファイル・履歴・PR・Issue}}</td></tr>
-      <tr><th>未確認の範囲</th><td>{{取得できなかった情報と調べていない範囲}}</td></tr>
       <tr><th>実行検証</th><td>なし</td></tr>
     </tbody>
   </table>
   </div>
-  {{本文と表で示していない出典リンクがあれば<ul class="sources-list">で追加する。調査日・コミットを保つ過去レポートがあれば、その旨とリンクを記す}}
+  <details class="report-details">
+    <summary>詳しい調査記録を見る</summary>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>項目</th><th>内容</th></tr></thead>
+      <tbody>
+        <tr><th>調査範囲</th><td>{{読んだファイル・履歴・PR・Issue}}</td></tr>
+        <tr><th>未確認の範囲</th><td>{{取得できなかった情報と調べていない範囲}}</td></tr>
+      </tbody>
+    </table>
+    </div>
+    {{Markdown版の調査記録にある補足の段落と、本文と表で示していない出典リンク（<ul class="sources-list">）。調査日・コミットを保つ過去レポートがあれば、その旨とリンクを記す}}
+  </details>
 </section>
 </main>
 </div>

@@ -92,7 +92,7 @@ pre code { background: none; padding: 0; font-size: 0.88rem; }
   font-size: 0.95rem;
   padding: 0.15em 0.8em;
   border-radius: 999px;
-  transform: rotate(-2deg);
+  transform: none;
 }
 .hero h1 {
   display: inline;
@@ -112,12 +112,12 @@ pre code { background: none; padding: 0; font-size: 0.88rem; }
 .facts dd { margin: 0; overflow-wrap: anywhere; }
 .layout { display: grid; grid-template-columns: 1fr; gap: 1.6rem; align-items: start; }
 .toc {
-  background: var(--yellow);
+  background: #fff4c2;
   color: #2b2d42;
   padding: 1rem 1.1rem 1.2rem;
   border-radius: 4px;
   box-shadow: 3px 5px 10px rgba(43, 45, 66, 0.18);
-  transform: rotate(-1deg);
+  transform: none;
 }
 .toc-title { margin: 0 0 0.4rem; font-size: 0.9rem; }
 .toc ol { margin: 0; padding-left: 1.3rem; line-height: 1.7; }
@@ -128,7 +128,7 @@ pre code { background: none; padding: 0; font-size: 0.88rem; }
 main { min-width: 0; }
 section {
   background: var(--surface);
-  border: 2px solid var(--ink);
+  border: 1px solid var(--line);
   border-radius: 14px;
   padding: clamp(1.2rem, 3vw, 2.2rem);
   margin-bottom: 1.8rem;
@@ -142,8 +142,8 @@ h2 {
   background: var(--sticker, var(--pink));
   padding: 0.3em 0.9em;
   border-radius: 8px;
-  transform: rotate(-1.5deg);
-  box-shadow: 3px 3px 0 var(--shadow-ink);
+  transform: none;
+  box-shadow: 0 1px 3px rgba(43, 45, 66, 0.12);
 }
 h3 {
   display: table;
@@ -195,7 +195,12 @@ footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: 
 #design h2 { color: var(--surface); }
 #application { --sticker: var(--yellow); }
 #sources { --sticker: var(--surface); }
-#sources h2 { color: var(--ink); border: 2px solid var(--ink); }
+#sources h2 { color: var(--ink); border: 1px solid var(--line); }
+
+.report-details { margin: 1rem 0; border: 1px solid var(--line); border-radius: 8px; padding: 0.7rem 1rem; }
+.report-details summary { cursor: pointer; color: var(--link); font-weight: 600; }
+.report-details[open] summary { margin-bottom: 0.8rem; }
+.report-details summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 </style>
 </head>
 <body>
@@ -246,13 +251,6 @@ footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: 
 <section id="flow">
   <h2>仕組みと処理の流れ</h2>
 <p>代表例として、上のURLを初めて渡し、このリポジトリのスキルを分析する場面を机上でたどる。スキル自身を題材にするため、調べるSKILL.mdも外部資料として読む。</p>
-<ol>
-  <li><strong>CLIが対象を確定する。</strong> prepareはURLを解決し、固定コミットの通常ファイルを一覧にする。skills.tsがSKILL.mdを見つけ、リポジトリ全体・個別・フォルダの選択範囲を決める。このリポジトリならskills/skill-anatomy/SKILL.mdが対象となる。PLANにはコミット、ファイル一覧、保存先、選択対象が入る。GitHub索引の取得に失敗しても、その状態を残して準備を続ける。<a href="https://github.com/yamazaki-yuki-23/skill-anatomy/blob/61d695d94dba7fcd5824f113b85ff07e114220e8/src/anatomy.ts#L62-L87">準備処理</a>、<a href="https://github.com/yamazaki-yuki-23/skill-anatomy/blob/61d695d94dba7fcd5824f113b85ff07e114220e8/src/skills.ts#L5-L28">スキルの検出</a>、<a href="https://github.com/yamazaki-yuki-23/skill-anatomy/blob/61d695d94dba7fcd5824f113b85ff07e114220e8/src/repository.ts#L149-L165">索引取得</a></li>
-  <li><strong>エージェントが方針を提示し、承認を待つ。</strong> 対象・件数・調査範囲・レポートと横断一覧の保存先を示す。利用者のOK後にapproveを呼ぶ。prepareを済ませただけでは本文分析へ進まない。--no-confirmも利用者が指定した場合に限る。<a href="https://github.com/yamazaki-yuki-23/skill-anatomy/blob/61d695d94dba7fcd5824f113b85ff07e114220e8/skills/skill-anatomy/SKILL.md#L19-L24">開始条件</a></li>
-  <li><strong>エージェントが固定原典を読む。</strong> research.mdに従って、入口から参照先・コード・履歴・議論へ進む。たとえば「再実行で何が再調査になるか」を説明するには、SKILL.mdだけでなくanatomy.tsの判定とfingerprint.tsの署名を読む。署名はファイルと関連履歴をまとめたハッシュで、比較に使う識別値である。対象のセットアップやテストは実行しない。<a href="https://github.com/yamazaki-yuki-23/skill-anatomy/blob/61d695d94dba7fcd5824f113b85ff07e114220e8/skills/skill-anatomy/references/research.md#L13-L42">調査手順</a>、<a href="https://github.com/yamazaki-yuki-23/skill-anatomy/blob/61d695d94dba7fcd5824f113b85ff07e114220e8/src/fingerprint.ts#L35-L63">署名の対象</a></li>
-  <li><strong>エージェントが個別分析を保存し、CLIが完了を記録する。</strong> report-format.mdが章の役割と完成条件、テンプレートが見出し、writing.mdが説明と推敲を担当する。エージェントが根拠・具体例・応用条件を確かめてからcompleteを呼ぶ。CLIは承認、対象、依存ファイルの存在、本文が空でないことを確認し、本文ハッシュと分析コミットを記録する。文章の正しさを採点する処理はcompleteにはない。<a href="https://github.com/yamazaki-yuki-23/skill-anatomy/blob/61d695d94dba7fcd5824f113b85ff07e114220e8/skills/skill-anatomy/references/report-format.md#L1-L18">執筆の分担</a>、<a href="https://github.com/yamazaki-yuki-23/skill-anatomy/blob/61d695d94dba7fcd5824f113b85ff07e114220e8/src/state.ts#L81-L147">完了記録</a></li>
-  <li><strong>全体分析を完成させ、学びの一覧を更新する。</strong> 個別がすべてdoneになってから全体分析を保存・完了記録する。statusでrepository.statusがdoneと確認できて初めて、エージェントが設計と適用条件を横断一覧へまとめる。1スキルの全体分析は個別分析への案内を中心にする。<a href="https://github.com/yamazaki-yuki-23/skill-anatomy/blob/61d695d94dba7fcd5824f113b85ff07e114220e8/skills/skill-anatomy/references/report-format.md#L41-L47">全体分析の分量</a>、<a href="https://github.com/yamazaki-yuki-23/skill-anatomy/blob/61d695d94dba7fcd5824f113b85ff07e114220e8/skills/skill-anatomy/references/learning-index.md#L5-L13">一覧更新の順序</a></li>
-</ol>
 <figure class="figure">
 <svg viewBox="0 0 760 210" role="img" aria-labelledby="flow-title">
   <title id="flow-title">代表例の流れ。CLIの処理とエージェントの判断を上下の段に分けて示す</title>
@@ -306,6 +304,15 @@ footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: 
 </svg>
 <figcaption>図：本文の手順1〜5の流れ。上段がCLIの処理、下段がエージェントの判断で、承認（2）と完了記録（4のcomplete）で両者が交わる。</figcaption>
 </figure>
+<details class="report-details"><summary>手順の詳しい説明を見る</summary>
+<ol>
+  <li><strong>CLIが対象を確定する。</strong> prepareはURLを解決し、固定コミットの通常ファイルを一覧にする。skills.tsがSKILL.mdを見つけ、リポジトリ全体・個別・フォルダの選択範囲を決める。このリポジトリならskills/skill-anatomy/SKILL.mdが対象となる。PLANにはコミット、ファイル一覧、保存先、選択対象が入る。GitHub索引の取得に失敗しても、その状態を残して準備を続ける。<a href="https://github.com/yamazaki-yuki-23/skill-anatomy/blob/61d695d94dba7fcd5824f113b85ff07e114220e8/src/anatomy.ts#L62-L87">準備処理</a>、<a href="https://github.com/yamazaki-yuki-23/skill-anatomy/blob/61d695d94dba7fcd5824f113b85ff07e114220e8/src/skills.ts#L5-L28">スキルの検出</a>、<a href="https://github.com/yamazaki-yuki-23/skill-anatomy/blob/61d695d94dba7fcd5824f113b85ff07e114220e8/src/repository.ts#L149-L165">索引取得</a></li>
+  <li><strong>エージェントが方針を提示し、承認を待つ。</strong> 対象・件数・調査範囲・レポートと横断一覧の保存先を示す。利用者のOK後にapproveを呼ぶ。prepareを済ませただけでは本文分析へ進まない。--no-confirmも利用者が指定した場合に限る。<a href="https://github.com/yamazaki-yuki-23/skill-anatomy/blob/61d695d94dba7fcd5824f113b85ff07e114220e8/skills/skill-anatomy/SKILL.md#L19-L24">開始条件</a></li>
+  <li><strong>エージェントが固定原典を読む。</strong> research.mdに従って、入口から参照先・コード・履歴・議論へ進む。たとえば「再実行で何が再調査になるか」を説明するには、SKILL.mdだけでなくanatomy.tsの判定とfingerprint.tsの署名を読む。署名はファイルと関連履歴をまとめたハッシュで、比較に使う識別値である。対象のセットアップやテストは実行しない。<a href="https://github.com/yamazaki-yuki-23/skill-anatomy/blob/61d695d94dba7fcd5824f113b85ff07e114220e8/skills/skill-anatomy/references/research.md#L13-L42">調査手順</a>、<a href="https://github.com/yamazaki-yuki-23/skill-anatomy/blob/61d695d94dba7fcd5824f113b85ff07e114220e8/src/fingerprint.ts#L35-L63">署名の対象</a></li>
+  <li><strong>エージェントが個別分析を保存し、CLIが完了を記録する。</strong> report-format.mdが章の役割と完成条件、テンプレートが見出し、writing.mdが説明と推敲を担当する。エージェントが根拠・具体例・応用条件を確かめてからcompleteを呼ぶ。CLIは承認、対象、依存ファイルの存在、本文が空でないことを確認し、本文ハッシュと分析コミットを記録する。文章の正しさを採点する処理はcompleteにはない。<a href="https://github.com/yamazaki-yuki-23/skill-anatomy/blob/61d695d94dba7fcd5824f113b85ff07e114220e8/skills/skill-anatomy/references/report-format.md#L1-L18">執筆の分担</a>、<a href="https://github.com/yamazaki-yuki-23/skill-anatomy/blob/61d695d94dba7fcd5824f113b85ff07e114220e8/src/state.ts#L81-L147">完了記録</a></li>
+  <li><strong>全体分析を完成させ、学びの一覧を更新する。</strong> 個別がすべてdoneになってから全体分析を保存・完了記録する。statusでrepository.statusがdoneと確認できて初めて、エージェントが設計と適用条件を横断一覧へまとめる。1スキルの全体分析は個別分析への案内を中心にする。<a href="https://github.com/yamazaki-yuki-23/skill-anatomy/blob/61d695d94dba7fcd5824f113b85ff07e114220e8/skills/skill-anatomy/references/report-format.md#L41-L47">全体分析の分量</a>、<a href="https://github.com/yamazaki-yuki-23/skill-anatomy/blob/61d695d94dba7fcd5824f113b85ff07e114220e8/skills/skill-anatomy/references/learning-index.md#L5-L13">一覧更新の順序</a></li>
+</ol>
+</details>
 <p>処理の分担は次のようになる。CLIは分析文章を生成せず、エージェントは状態ファイルを直接更新する代わりにCLIを呼ぶ。</p>
 <div class="table-wrap">
 <table>
@@ -390,13 +397,22 @@ footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: 
 <tr><th>元URL</th><td><a href="https://github.com/yamazaki-yuki-23/skill-anatomy/blob/61d695d94dba7fcd5824f113b85ff07e114220e8/skills/skill-anatomy/SKILL.md">skill-anatomy</a></td></tr>
 <tr><th>分析コミット</th><td>61d695d94dba7fcd5824f113b85ff07e114220e8</td></tr>
 <tr><th>調査日</th><td>2026-10-28</td></tr>
-<tr><th>調査範囲</th><td>SKILL.md、references全4件、templates全3件、agents/openai.yaml、配布package.json。共有のREADME.ja.md、srcのCLI・準備・取得・検出・署名・状態・保存・workspace、workflow.test.ts、配布契約・レビュー・releaseの補助コード、安全性評価の実行側・模擬ツール・入力fixture、品質と安全性の文書。固定コミットまでの全履歴一覧、SKILL.mdの移動追跡履歴、索引更新と評価調査追加の差分。全Issue・PR索引からIssue #24・#29の本文、PR #46・#50の本文・全コメント・レビュー・変更ファイルを確認した。追加の重点・応用先資料の指定はなく、通常の分析と仮想例を用いた。</td></tr>
-<tr><th>未確認の範囲</th><td>旧examplesと画像・バイナリは供給されておらず参照していない。初期版の本文差分は取得できず、初期構成の採用動機は未確認。PRで言及されたGit管理外の評価生ログや訂正コピー、他リポジトリの原典、その他の議論詳細、未読のテスト・開発コードは未確認。評価の探索は固定ファイル一覧と上記の共有評価資料までで、配下に独立したevalsはない。過去の品質確認は作者の報告として扱い、今回の結果に置き換えていない。</td></tr>
 <tr><th>実行検証</th><td>なし</td></tr>
 </tbody>
 </table>
 </div>
+<details class="report-details"><summary>詳しい調査記録を見る</summary>
+<div class="table-wrap">
+<table>
+<thead><tr><th>項目</th><th>内容</th></tr></thead>
+<tbody>
+<tr><th>調査範囲</th><td>SKILL.md、references全4件、templates全3件、agents/openai.yaml、配布package.json。共有のREADME.ja.md、srcのCLI・準備・取得・検出・署名・状態・保存・workspace、workflow.test.ts、配布契約・レビュー・releaseの補助コード、安全性評価の実行側・模擬ツール・入力fixture、品質と安全性の文書。固定コミットまでの全履歴一覧、SKILL.mdの移動追跡履歴、索引更新と評価調査追加の差分。全Issue・PR索引からIssue #24・#29の本文、PR #46・#50の本文・全コメント・レビュー・変更ファイルを確認した。追加の重点・応用先資料の指定はなく、通常の分析と仮想例を用いた。</td></tr>
+<tr><th>未確認の範囲</th><td>旧examplesと画像・バイナリは供給されておらず参照していない。初期版の本文差分は取得できず、初期構成の採用動機は未確認。PRで言及されたGit管理外の評価生ログや訂正コピー、他リポジトリの原典、その他の議論詳細、未読のテスト・開発コードは未確認。評価の探索は固定ファイル一覧と上記の共有評価資料までで、配下に独立したevalsはない。過去の品質確認は作者の報告として扱い、今回の結果に置き換えていない。</td></tr>
+</tbody>
+</table>
+</div>
 <p>本文のソースリンクは分析コミットへ固定した。議論のリンクは発言者と報告内容を確認する出典であり、外部リポジトリや非公開ログへ調査を広げていない。対象はMITライセンスで公開されている。<a href="https://github.com/yamazaki-yuki-23/skill-anatomy/blob/61d695d94dba7fcd5824f113b85ff07e114220e8/skills/skill-anatomy/LICENSE#L1-L21">ライセンス</a></p>
+</details>
 </section>
 </main>
 </div>
