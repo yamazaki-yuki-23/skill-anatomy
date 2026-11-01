@@ -27,6 +27,26 @@ test('published HTML templates satisfy the safety conditions', () => {
     assert.match(template, /<style>/);
     assert.match(template, /prefers-color-scheme: dark/);
     assert.match(template, /調査範囲と出典/);
+    assert.match(template, /<details class="report-details">/);
+    assert.match(template, /<summary>詳しい調査記録を見る<\/summary>/);
+    assert.match(template, /#fff4c2/);
+    assert.doesNotMatch(template, /rotate\(/);
+  }
+});
+
+test('published HTML examples satisfy the safety conditions', () => {
+  for (const name of [
+    'skill-anatomy.html',
+    'yomiyasu/skill-analyses/yomiyasu.html',
+    'yomiyasu/repository-analysis.html',
+  ]) {
+    const example = readFileSync(
+      fileURLToPath(new URL(`../examples/${name}`, import.meta.url)),
+      'utf8',
+    );
+    assert.deepEqual(inspectHtml(example), [], name);
+    assert.match(example, /<details class="report-details">/);
+    assert.doesNotMatch(example, /rotate\(/);
   }
 });
 

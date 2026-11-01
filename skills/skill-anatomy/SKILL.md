@@ -20,7 +20,7 @@ Node.js 22以上とGitを使う。PR・Issueの取得には認証済みGitHub CL
 1. `prepare URL` を実行する。`--no-confirm` と `--refresh` は利用者が指定した場合だけ付け、利用者がHTMLでの出力を求めた場合だけ `--format html` を付ける。応答の `plan_file` をPLANとし、対象・調査範囲・件数・`pending`・`warning`・`format`・レポートの保存先 `destination` と、その2階層上に置く横断一覧 `index.md` を利用者に示す。本文の分析やレポートの更新はまだ始めない。
    利用者がURLと一緒に伝えた関心事は重点とし、答える問いと説明する章を方針に含める。応用先に自作スキルを指定された場合は、[応用先資料の境界](references/research.md#利用者の自作スキルを応用先にする場合)に従い、読む資料と対象外を方針に含める。指定がなければ通常の調査・形式・仮想例を使う。完了済みレポートに追加の調査が必要なら `--refresh` を案内し、無断で本文を書き換えない。
 2. `--no-confirm` がなければ開始してよいか1回尋ね、OKの後に `approve PLAN` を実行する。確認を省く場合も方針は示し、方針や対象を変えたら再承認を受ける。ツールの権限確認は省略しない。
-3. [調査手順](references/research.md)に従い、PLANの固定コミットから根拠を調べる。
+3. [調査手順](references/research.md)に従い、PLANの固定コミットから根拠を調べる。動作を追う、設計の理由を調べる、他にも使える工夫を取り出す、別用途に当てはめる、の4つの手法ごとにメモを残す。
 4. [執筆・完成基準](references/report-format.md)と[書き方](references/writing.md)に従い、`status PLAN` で `pending` のスキルを1件ずつ分析し、各項目の `report` に日本語Markdownを保存する。基準を満たしたら `complete PLAN --skill '元のSKILL.mdのパス'` を実行し、対象スキルのフォルダ外で読んだファイルは `--dependency PATH` で登録する。応答の `done` / `total` を伝え、残件がなくなるまで続ける。中断時はPLANと残件を示す。
 5. 同じ基準で `repository-analysis.md` を書き、`complete PLAN --repository` を実行する。
 6. PLANの `format` が `html` のとき、または今回Markdown版を書き直したレポートに既存のHTML版があるときは、[HTML版の作り方](references/html-report.md)に従い、`status PLAN` の `html.report` へHTML版を書き起こして `check-html PLAN (--skill PATH | --repository)` で検査する。HTML版は完了記録に含めず、結果は分析の完了と別に報告する。
