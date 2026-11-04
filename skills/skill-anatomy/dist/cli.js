@@ -31,7 +31,7 @@ function main(args) {
     return;
   }
   if (["-V", "--version"].includes(command)) {
-    console.log("0.6.0");
+    console.log("0.7.0");
     return;
   }
   if (!["prepare", "approve", "status", "complete", "check-html"].includes(command))
