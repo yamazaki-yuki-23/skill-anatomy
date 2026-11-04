@@ -4,6 +4,7 @@ import { htmlPath, inspectHtml } from './html.js';
 import { inside, readJson, writeJson, withStateLock } from './storage.js';
 import type { HtmlProgress, Plan, Progress, State } from './types.js';
 export const VERSION = 2;
+export const REPORT_BYTES_GUIDE = 20000;
 export function timestamp(): string {
   return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
@@ -178,10 +179,18 @@ export function complete(
       state.repository = null;
     }
     writeJson(plan.state_file, state);
+    const reportBytes = Buffer.byteLength(readFileSync(report, 'utf8'), 'utf8');
+    const warnings: string[] = [];
+    if (!repository && reportBytes > REPORT_BYTES_GUIDE)
+      warnings.push(
+        `個別分析が分量の目安（${REPORT_BYTES_GUIDE}バイト、承認済み見本の約2倍）を超えています: ${reportBytes}バイト。書き方の推敲手順に従って削るか、必要な理由を調査記録に残してください`,
+      );
     return {
       saved: report,
+      report_bytes: reportBytes,
       done: selected.filter((e) => state.skills[e.skill]?.status === 'done').length,
       total: selected.length,
+      ...(warnings.length ? { warnings } : {}),
     };
   });
 }

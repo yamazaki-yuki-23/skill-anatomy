@@ -212,11 +212,34 @@ test('distributed Node CLI preserves the approval gate and records completed rep
   assert.equal(approved.status, 0, approved.stderr);
   const completed = invoke('complete', prepared.planFile, '--skill', entry.skill);
   assert.equal(completed.status, 0, completed.stderr);
-  assert.equal(JSON.parse(completed.stdout).done, 1);
+  const completedResult = JSON.parse(completed.stdout);
+  assert.equal(completedResult.done, 1);
+  assert.equal(completedResult.report_bytes, Buffer.byteLength('# 分析済み\n', 'utf8'));
+  assert.equal(completedResult.warnings, undefined);
   assert.equal(
     required(readJson<State>(prepared.plan.state_file).skills[entry.skill]).status,
     'done',
   );
+});
+
+test('complete reports the size of an oversized skill analysis with a warning', () => {
+  const f = new Fixture();
+  const prepared = f.prepare('', true);
+  const entry = required(prepared.plan.skills[0]);
+  mkdirSync(path.dirname(entry.report), { recursive: true });
+  writeFileSync(entry.report, `# 長い分析\n${'根拠付きの説明。'.repeat(2000)}\n`);
+  const result = complete(prepared.planFile, entry.skill) as {
+    'report_bytes': number;
+    warnings?: string[];
+  };
+  assert.ok(result.report_bytes > 20000);
+  assert.equal(result.warnings?.length, 1);
+  assert.match(required(result.warnings?.[0]), /分量の目安/);
+  const repositoryReport = path.join(prepared.plan.destination, 'repository-analysis.md');
+  for (const other of prepared.plan.skills.slice(1)) f.finish(prepared, other.skill);
+  writeFileSync(repositoryReport, `# 全体\n${'説明。'.repeat(8000)}\n`);
+  const repository = complete(prepared.planFile, undefined, true) as { warnings?: string[] };
+  assert.equal(repository.warnings, undefined);
 });
 
 test('repository, tree, blob, slash branch and commit URLs', () => {
