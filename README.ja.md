@@ -114,7 +114,7 @@ HTML版は、完成したMarkdownをもとにエージェントが書き起こ�
 <details>
 <summary>保存先の変更と、再実行時の注意</summary>
 
-CLIを直接使う場合は、`status PLAN` で選択対象ごとの `pending` / `done`、全体分析の `repository.status`、完了件数の `done` / `total`、各レポートのHTML版の有無と検査結果 `html` を確認できます。HTML版の検査だけを行うには `check-html PLAN --skill PATH/SKILL.md` または `check-html PLAN --repository` を使います。`PLAN` には最新の `prepare` が返した `plan_file` を指定してください。個別の状態は完了記録を示し、ソースや個別レポートを変更した場合の再判定には `prepare` を使います。個別分析が再調査対象になった場合や個別の完成記録を更新した場合は、古い全体分析の完了記録を無効化し、改めて全体分析の完成を記録するまで `pending` を保ちます。
+CLIを直接使う場合は、`status PLAN` で選択対象ごとの `pending` / `done`、全体分析の `repository.status`、完了件数の `done` / `total`、各レポートのHTML版の有無と検査結果 `html` を確認できます。`complete` は保存したレポートのサイズを `report_bytes` で返し、個別分析が分量の目安（承認済み見本の約2倍の20,000バイト）を超えると `warnings` を付けます。エージェントは書き方の推敲手順で削ってから完了を記録し直します。HTML版の検査だけを行うには `check-html PLAN --skill PATH/SKILL.md` または `check-html PLAN --repository` を使います。`PLAN` には最新の `prepare` が返した `plan_file` を指定してください。個別の状態は完了記録を示し、ソースや個別レポートを変更した場合の再判定には `prepare` を使います。個別分析が再調査対象になった場合や個別の完成記録を更新した場合は、古い全体分析の完了記録を無効化し、改めて全体分析の完成を記録するまで `pending` を保ちます。
 
 保存先を変える場合は、エージェントを起動する前に設定します。
 
