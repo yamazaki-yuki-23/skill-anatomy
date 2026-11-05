@@ -39,7 +39,7 @@ Skill anatomyは、スキルの仕組みを知り、自作に活かすためのA
 | `skills/skill-anatomy/references/`、`skills/skill-anatomy/assets/templates/` | 補足資料、レポートのテンプレート（Markdownと、指定時に書くHTML版） |
 | `skills/skill-anatomy/agents/openai.yaml`、`examples/` | エージェントのメタデータ、レポート例 |
 | `tests/` | テストとチェックポイントのテストデータ |
-| `scripts/harness/` | 構成検査、検証記録、Codexレビュー、リリース準備 |
+| `scripts/harness/` | 構成検査、検証記録、Codexレビュー、リリース準備、実モデル評価 |
 
 利用者向けの動作説明を変えるときは、`README.md` と `README.ja.md` の内容を揃えてください。
 

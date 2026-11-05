@@ -157,6 +157,8 @@ Issue作成、実装、PR作成、マージ、push、公開は別の権限とし
 
 検査の成功と、文章の品質確認は別に扱う。モデルが作る説明の正しさは、見出しやキーワードの一致だけでは判断しない。新しく見つかった失敗は、テストデータや攻撃例へ追加して次回も検証する。[評価の手順と限界](security-evaluation.md)も参照する。
 
+未使用題材での実モデル評価は`bun scripts/harness/real-eval.ts single`（gavdalf/total-recallの固定コミット、HTML版あり）と`bun scripts/harness/real-eval.ts multi`（mattpocock/skillsの`skills/misc`にある4スキル、Markdown）で実行する。ログイン済みのCodex CLIとGitHub CLIが必要で、CIには含めない。原典は`.cache/issue-work/<owner>-<repo>.git`にbare cloneし、記録は`.cache/issue-work/<題材>-<時刻>/`に残る（`conditions.json`、`events.jsonl`、`tools.jsonl`、`timings.jsonl`、`summary.json`。生成レポートは`workspace/`）。モデルに許すのは固定コミットのファイル、その祖先コミット、同じリポジトリのIssue・PRの読み取りと、承認済みレポートの書き込みだけで、この許可規則は`tests/real-eval.test.ts`で検査する。実行中は作業ツリーと`skills/skill-anatomy/dist/`を変更しない。品質は[品質の採点基準](quality-rubric.md)に従って生成レポートを実読して判断し、`summary.json`の機械検査だけで合格にしない。
+
 ## 全PRで行うCodexメンションレビュー
 
 今後すべてのPRで、調整担当がPRコメントへ`@codex review`を投稿する。自動レビューがあっても明示依頼を省略しない。このGitHub上の手順は、独立レビューや下記のローカル`harness:review`とは別に必須とする。利用者にメンション投稿や別担当への転送を頼まない。
