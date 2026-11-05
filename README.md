@@ -2,79 +2,42 @@
 
 English | [日本語](README.ja.md)
 
-![Skill anatomy. An exploded book with connected layers illustrates studying the instructions, references, and history behind an agent skill.](assets/skill-anatomy-cover.en.webp)
-
-Understand how your favorite agent skills work, and apply what you learn to your own.
-
-Pass the URL of a skill on GitHub to get a Japanese report on how it works, its design decisions, and ideas for your own skills. Reports are saved as Markdown; on request, an HTML version with the same content is saved beside each one. Each report follows one representative input from start to output, separates the author's stated reasons from what the files and history show, extracts reusable ideas as a problem, a behavior, and the conditions where they apply, and ends with one worked example of applying them to a different task.
-
-The [self-analysis example, in Japanese](examples/skill-anatomy.md), was generated with this skill on October 28, 2026, from [commit `61d695d`](https://github.com/yamazaki-yuki-23/skill-anatomy/tree/61d695d94dba7fcd5824f113b85ff07e114220e8). Its report body is the generated output, with only three source line references corrected after review. The [HTML version](examples/skill-anatomy.html) of the same report was written from the Markdown by this skill's HTML procedure. The [grill-me analysis](examples/grill-me.md) remains a historical example researched on October 22, 2026; it was not regenerated. The [yomiyasu analysis](examples/yomiyasu/skill-analyses/yomiyasu.md) and its [repository analysis](examples/yomiyasu/repository-analysis.md), each with an HTML version beside it, are the approved reference reports for the current writing and HTML rules; they were researched on November 1, 2026 from [commit `29d67cc`](https://github.com/nanaism/yomiyasu/tree/29d67ccb05e370b5958d72920a9cd1aa829dee80) without running the skill.
+Understand how your favorite agent skills work, and apply what you learn to your own. Pass the URL of a skill on GitHub and get a Japanese report on how it works, why it was designed that way, and how to apply the ideas to a different task.
 
 ## Get started
 
-Requires Node.js 22 or later and Git.
+Requires Node.js 22 or later and Git. To include pull requests and issues, also install the GitHub CLI and run `gh auth login`.
 
-1. Install the skill with either command. Choose your agent and installation location when prompted.
+1. Install the skill. Choose your agent and installation location when prompted.
 
    ```sh
-   # Install
    npx skills add yamazaki-yuki-23/skill-anatomy
-
-   # Update
-   npx skills update skill-anatomy
-   ```
-
-   Or use the GitHub CLI:
-
-   ```sh
-   # Install
-   gh skill install yamazaki-yuki-23/skill-anatomy skill-anatomy
-
-   # Update
-   gh skill update skill-anatomy
+   # or: gh skill install yamazaki-yuki-23/skill-anatomy skill-anatomy
    ```
 
 2. Restart your agent and pass the GitHub URL you want to study.
-
-   Codex:
-
-   ```text
-   $skill-anatomy https://github.com/mattpocock/skills
-   ```
-
-   Claude Code:
 
    ```text
    /skill-anatomy https://github.com/mattpocock/skills
    ```
 
-3. Check the proposed research scope and output location, then reply "OK". The agent saves a report for each skill as it works, followed by a report on the repository as a whole.
+   In Codex, write `$skill-anatomy` instead of `/skill-anatomy`.
 
-To also get an HTML version to read in a browser, say so alongside the URL, for example "output HTML as well". The agent adds `--format html` and writes a `.html` file with the same content beside each Markdown report.
+3. Check the proposed research scope and output location, then reply "OK". The agent saves a report for each skill as it works, then a report on the repository as a whole, under `reports/` in the output location it proposed (by default the directory you run the analysis in; see [Saved files](#saved-files)).
 
-The URL determines the research scope: a whole repository, [one skill](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me), a folder containing several skills, or a `SKILL.md` file.
+The URL decides the scope: a whole repository, one skill, a folder of skills, or a `SKILL.md` file. To read the report in a browser as well, add "output HTML as well" and a `.html` file with the same content is saved beside each Markdown report. Update later with `npx skills update skill-anatomy` or `gh skill update skill-anatomy`.
 
-To include pull requests and issues, install the GitHub CLI and authenticate with `gh auth login`. If it is unavailable, research continues with files and commits, and missing information is noted in the report.
+## What you get
 
-## What the reports explain
+![Skill anatomy. An exploded book with connected layers illustrates studying the instructions, references, and history behind an agent skill.](assets/skill-anatomy-cover.en.webp)
 
-- What problem the author faced, and which changes addressed it.
-- How instruction order, approval points, and the division of responsibilities across references shape the agent's decisions.
-- What conditions and instructions you would need to apply a design idea to a different problem.
+Each skill report follows one representative input from start to output, separates the author's stated reasons from what the files and history show, extracts reusable ideas as a problem, a behavior, and the conditions where they apply, and ends with one worked example of applying them to a different task. The repository report lists the skills and the design ideas they share. Every report uses the same headings in the same order, cites its sources at a fixed commit, and marks unknown motivations as unverified. Target skills are never executed or scored.
 
-Skill anatomy was built to explore why a skill's instructions work the way they do, and how you might design your own. You can add a question alongside the URL, such as "explain how responsibilities are split between SKILL.md and its references". Your focus guides research and explanation in the relevant sections. Research boundaries and the other completion criteria still apply; unanswered questions remain in the unverified scope. If a completed report needs additional research, the agent explains how to use `--refresh`.
+Read the [approved sample report](examples/yomiyasu/skill-analyses/yomiyasu.md) and the [other examples](examples/README.md) to see the result. The analysis methods and writing rules live in the skill's [references](skills/skill-anatomy/references/), and the provenance of the methods in [docs/analysis-methods.md](docs/analysis-methods.md).
 
-Explanations cite their sources and distinguish the author's statements from the analyst's interpretation. Unknown motivations are identified. Research stays within the target repository's files, commits, pull requests, and issues. Target skills are not executed or scored.
+You can add a question alongside the URL, such as "explain how responsibilities are split between SKILL.md and its references"; the relevant sections then go deeper on it. To apply the findings to your own skill, paste its contents or name the local file to read; the application section then explains what to change and why, without editing or running your skill.
 
 ## Saved files
-
-Reports are saved under `reports/` in the first applicable location:
-
-1. The directory set in `SKILL_ANATOMY_WORKSPACE`.
-2. The root of the Skill anatomy Git clone, when using the skill from that clone.
-3. Otherwise, the directory where you run the analysis.
-
-For example, using a clone at `skill-anatomy/` from another directory saves reports to `skill-anatomy/reports/` unless the variable is set. Run installed copies from outside the skill directory. With the default location, their reports remain separate and survive skill updates.
 
 ```text
 reports/<owner>/<repository>/
@@ -83,64 +46,35 @@ reports/<owner>/<repository>/
 ├── skill-analyses/<path>.md     # Report on each skill
 ├── skill-analyses/<path>.html   # Its HTML version (when requested)
 └── .state.json                 # Record used to resume research
+reports/index.md                # Design ideas learned across repositories
 ```
 
-The repository report covers the skill list and shared design ideas. Each skill's report explains its mechanism, history, and applications. Links in the repository report lead to those reports. For a single skill, the repository report is a short guide to the researched scope and individual report; it does not repeat the detailed examples.
-
-Each report type uses consistent headings in a fixed order, so you can find usage, history, design, and applications in the same place when comparing skills.
-
-The HTML version is written by the agent from the completed Markdown. Research is not repeated, and the body, sources, and headings match the Markdown version; a template provides the table of contents, table styling, and support for narrow screens and dark mode. When the flow chapter has a diagram, the detailed steps below it are collapsed, as is the detailed research record at the end; opening them shows the full text, and the source URL, full commit, research date, and execution-check status stay visible. The CLI's `check-html` command verifies that the file contains no scripts, event handlers, or external resource loads, and rejects any HTML version that does. HTML versions are not part of the completion record; `status` reports their presence and check result under `html`. When renewed research rewrites a Markdown report, the HTML version beside it is rewritten too. Source links in the cross-report index keep pointing to the Markdown versions.
-
-When evaluation or test materials are present, the analysis explains their inputs, expected outputs, and failure conditions as evidence for design choices. Evaluations and tests are not executed, and definitions or illustrative examples are not presented as measured results.
-
-To apply the findings to your own skill, paste its contents or explicitly name the local regular files to read. The application section explains its problem, the design to apply, and what to change and why. References and neighboring files are not read automatically, and your skill is not edited or executed. The research record identifies the supplied material and gaps. Changes to application files are not detected automatically; use `--refresh` for additional research on a completed report.
-
-After repository analysis completes, the agent updates `reports/index.md` with design ideas, application conditions, source reports, research dates, and analyzed commits. The index path is proposed before approval. Rows from other reports are preserved, and index changes do not affect analysis resume decisions. Older reports are imported only when explicitly selected; they are not discovered automatically. Do not update the shared index concurrently.
-
-## Resume or repeat research
-
-Pass the same URL again to research unfinished skills and those affected by source or shared-reference changes. If only the pull request and issue index changes, completed report content is retained, and `discussion_updates` plus a warning identify unverified discussion updates. The warning persists until explicit research completes. Use `--refresh` to research the selected scope and incorporate discussions. The full index is still acquired.
-
-If the GitHub index is unavailable on both runs, completed analyses are reused when their sources and saved reports are unchanged. Pull request and issue updates remain unverified, so the CLI warns on every run, and new analyses record the missing information in their research scope. All skills are researched again when index access returns or a previously available index becomes unavailable. Use `--refresh` to force research again.
-
-Add these options after the URL:
-
-| Option | Behavior |
-|---|---|
-| `--no-confirm` | Skip research-plan confirmation for this run. Tool permission prompts still apply. |
-| `--refresh` | Research the entire selected scope again. |
-| `--format html` | Also save an HTML version with the same content beside each Markdown report. |
-
-<details>
-<summary>Change the output location and understand reruns</summary>
-
-`prepare` also expands the files of the pinned commit into `.cache/sources/<owner>/<repo>/<commit>/` under the storage directory and writes an index of paths, byte counts and line counts beside it (`source` and `source_index` in the response and the PLAN). The agent reads sources from that tree instead of running `git show` per file; files over 1 MiB are listed but not expanded, and a commit that was expanded before is reused. `discussion PLAN --number N` fetches the body, comments, reviews, review comments and changed files of each issue or pull request in one call, recording endpoints that failed under `errors`.
-
-When calling the CLI directly, use `status PLAN` to see each selected skill's `pending` / `done` state, the repository analysis's `repository.status`, the `done` / `total` count, and each report's HTML presence and check result under `html`. `complete` returns the saved report's size as `report_bytes`, and adds `warnings` when a skill analysis exceeds the length guide of 20,000 bytes, about twice the approved sample; the agent then trims the report following the writing rules and records completion again. To check an HTML version on its own, run `check-html PLAN --skill PATH/SKILL.md` or `check-html PLAN --repository`. Pass the `plan_file` from the latest `prepare` as `PLAN`. Individual states are completion records; run `prepare` to reassess changes to sources or individual reports. When individual research becomes pending or an individual completion record is updated, the old repository completion record is invalidated and stays `pending` until you record repository completion again.
-
-To choose another location, set this variable before starting your agent:
+`reports/` is created in the first applicable location: the directory set in `SKILL_ANATOMY_WORKSPACE`; otherwise the root of the Skill anatomy Git clone when the skill is loaded from that clone, whatever directory you run the analysis in; otherwise the directory where you run the analysis. Installed copies must be run from outside the skill directory, and with the default location their reports survive updates. To choose another location, set the variable before starting your agent:
 
 ```sh
 export SKILL_ANATOMY_WORKSPACE="$HOME/.local/share/skill-anatomy"
 ```
 
-When calling the CLI directly, use `prepare URL --workspace "/path/to/analysis"` to choose where this run saves reports and caches. This overrides the environment variable and default location. Choose a storage directory outside the installed skill. The former `--tool-root` option returns an error explaining how to migrate.
+After the repository report completes, the agent adds the design ideas to `reports/index.md` and keeps rows written for other repositories.
 
-Skills with the same name are distinguished by their original paths. Reports for deleted skills are retained. You can track reports and `.state.json` together in Git. Do not research the same repository concurrently in the same output location.
+## Resume or repeat research
 
-`prepare`, `approve`, and `complete` stop with a `.state.json.lock` error if another process is updating the same repository state. Locks cover each CLI command, including repository acquisition during `prepare`; they do not cover agents writing report content. Different repositories use separate locks.
+Pass the same URL again to research unfinished skills and those affected by source changes; completed reports keep their research date and commit. If only the pull-request and issue index changed, the agent keeps the reports and warns about unverified discussion updates until you ask for renewed research.
 
-If a lock remains after an abnormal exit, recover it as follows:
+| Option | Behavior |
+|---|---|
+| `--no-confirm` | Skip research-plan confirmation for this run. Tool permission prompts still apply. |
+| `--refresh` | Research the entire selected scope again, including discussions. |
+| `--format html` | Also save an HTML version with the same content beside each Markdown report. |
 
-1. Read the lock file named in the error and check its `hostname`, `pid`, and `created_at`. Stop commands for that repository on every machine sharing the output location. A PID alone does not identify the owner because operating systems reuse PIDs.
-2. Only after confirming that no process is using it, including on the recorded host, preserve the lock by renaming it to an unused name in your file manager, such as `.state.json.lock.recovered-20261028-090000`. Leave it unchanged if execution status is unknown.
-3. Run the command again. If it reports a lock again, check for another run. Keep `.state.json` and PLAN files.
+<details>
+<summary>Using the CLI directly, locks, and cleanup</summary>
 
-Locks are released on normal completion and exceptions. There is no automatic recovery based on age or PID, and no recovery waiting period.
+The agent drives `node skills/skill-anatomy/dist/cli.js` (`--help` lists the commands). `prepare URL` pins the commit, expands its files into `.cache/sources/<owner>/<repo>/<commit>/` with an index of paths, byte counts and line counts, fetches the issue index, and returns the PLAN; `prepare URL --workspace PATH` overrides the output location for one run. `approve PLAN` records your OK. `status PLAN` shows each skill's `pending` / `done` state, the repository state, and each HTML version's presence and check result. `complete PLAN --skill PATH` or `--repository` records completion and returns `report_bytes`, with `warnings` when a skill analysis exceeds 20,000 bytes. `check-html PLAN --skill PATH` or `--repository` verifies that an HTML version contains no scripts, event handlers or external resources. `discussion PLAN --number N` fetches an issue or pull request with its comments, reviews and changed files in one call. HTML versions are not part of the completion record.
 
-After successfully saving a new preparation, `prepare` removes superseded plan directories for the same repository. It retains the latest PLAN and index, resume state, reports, and other repositories' plans. You can continue an interrupted analysis with the latest PLAN; another `prepare` returns a new PLAN carrying the current completion state. Cleanup only removes generated `run-*` directories containing exactly the old PLAN and index for the same state file. Extra files, malformed PLAN metadata, and symbolic links are preserved; cleanup failures produce a warning.
+`prepare`, `approve` and `complete` stop with a `.state.json.lock` error while another process updates the same repository state. If a lock remains after an abnormal exit, read the lock file named in the error, check its `hostname`, `pid` and `created_at`, make sure no process on any machine sharing the output location is still running, then rename the lock to an unused name and run the command again. There is no automatic recovery. Do not research the same repository concurrently in the same output location, and do not update the shared index concurrently.
 
-Some updates, such as changes limited to PR reviews, may go undetected. Use `--refresh` when you want to research them again.
+A successful `prepare` removes superseded plan directories for the same repository, keeping the latest PLAN, the resume state, the reports and other repositories' plans; directories with extra files, malformed PLAN metadata or symbolic links are preserved. Skills with the same name are distinguished by their original paths, and reports for deleted skills are retained. You can track `reports/` including `.state.json` in Git.
 
 </details>
 
