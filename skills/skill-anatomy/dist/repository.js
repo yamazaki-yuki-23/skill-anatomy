@@ -17,6 +17,19 @@ export function run(program, args) {
 export function git(cache, args) {
   return run("git", ["-c", "core.hooksPath=/dev/null", "--git-dir", cache, ...args]);
 }
+export function gitBuffer(cache, args, input) {
+  const result = spawnSync("git", ["-c", "core.hooksPath=/dev/null", "--git-dir", cache, ...args], {
+    env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+    input,
+    maxBuffer: 1024 * 1024 * 1024,
+    windowsHide: true
+  });
+  if (result.error)
+    throw new Error(`gitを起動できません: ${result.error.message}`);
+  if (result.status !== 0)
+    throw new Error(`gitの実行に失敗: ${result.stderr?.toString("utf8").trim() || result.signal || result.status}`);
+  return result.stdout;
+}
 export function parseUrl(input) {
   let url;
   try {
@@ -135,4 +148,123 @@ export function fetchIndex(target) {
   } catch (error) {
     return { status: "unavailable", items: [], error: error.message };
   }
+}
+function api(endpoint, paginate) {
+  const args = paginate ? ["--paginate", "--slurp"] : [];
+  const parsed = JSON.parse(run("gh", ["api", "--hostname", "github.com", ...args, endpoint]));
+  if (!paginate)
+    return parsed;
+  if (!Array.isArray(parsed) || parsed.some((page) => !Array.isArray(page)))
+    throw new Error("GitHubの応答形式が不正です");
+  return parsed.flat();
+}
+function pick(value, keys) {
+  if (typeof value !== "object" || value === null)
+    return null;
+  const record = value;
+  const picked = {};
+  for (const key of keys) {
+    const item = record[key];
+    if (key === "user") {
+      const user = typeof item === "object" && item !== null ? item : null;
+      picked.user = user?.login ?? null;
+      picked.bot = user?.type === "Bot";
+    } else if (key === "labels")
+      picked.labels = Array.isArray(item) ? item.map((label) => typeof label === "object" && label !== null && ("name" in label) ? label.name : label) : [];
+    else if (key === "head" || key === "base")
+      picked[key] = typeof item === "object" && item !== null ? { ref: item.ref ?? null, sha: item.sha ?? null } : null;
+    else
+      picked[key] = item ?? null;
+  }
+  return picked;
+}
+function pickAll(value, keys) {
+  return Array.isArray(value) ? value.map((item) => pick(item, keys) ?? {}) : null;
+}
+const issueKeys = [
+  "number",
+  "title",
+  "state",
+  "user",
+  "labels",
+  "created_at",
+  "updated_at",
+  "closed_at",
+  "comments",
+  "html_url",
+  "body"
+];
+const commentKeys = ["id", "user", "created_at", "html_url", "body"];
+const pullKeys = [
+  "number",
+  "state",
+  "draft",
+  "merged_at",
+  "merge_commit_sha",
+  "head",
+  "base",
+  "commits",
+  "additions",
+  "deletions",
+  "changed_files",
+  "html_url"
+];
+const reviewKeys = ["id", "user", "state", "commit_id", "submitted_at", "html_url", "body"];
+const reviewCommentKeys = [
+  "id",
+  "user",
+  "path",
+  "line",
+  "original_line",
+  "in_reply_to_id",
+  "created_at",
+  "html_url",
+  "body"
+];
+const fileKeys = [
+  "filename",
+  "previous_filename",
+  "status",
+  "additions",
+  "deletions",
+  "changes",
+  "patch"
+];
+export function fetchDiscussion(target, numbers) {
+  const base = `repos/${target.owner}/${target.repo}`;
+  return numbers.map((number) => {
+    const item = {
+      number,
+      kind: "unknown",
+      issue: null,
+      comments: null,
+      pull: null,
+      reviews: null,
+      review_comments: null,
+      files: null,
+      errors: []
+    };
+    const fetch = (endpoint, paginate) => {
+      try {
+        return api(`${base}/${endpoint}`, paginate);
+      } catch (error) {
+        item.errors.push({ endpoint, error: error.message });
+        return null;
+      }
+    };
+    const issue = fetch(`issues/${number}`, false);
+    if (issue === null)
+      return item;
+    item.issue = pick(issue, issueKeys);
+    item.comments = pickAll(fetch(`issues/${number}/comments`, true), commentKeys);
+    const isPull = typeof issue === "object" && "pull_request" in issue;
+    item.kind = isPull ? "pull" : "issue";
+    if (!isPull)
+      return item;
+    item.pull = pick(fetch(`pulls/${number}`, false), pullKeys);
+    item.reviews = pickAll(fetch(`pulls/${number}/reviews`, true), reviewKeys);
+    item.review_comments = pickAll(fetch(`pulls/${number}/comments`, true), reviewCommentKeys);
+    item.files = pickAll(fetch(`pulls/${number}/files`, true), fileKeys);
+    return item;
+  });
 }

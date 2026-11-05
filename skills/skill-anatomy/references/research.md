@@ -43,16 +43,17 @@
 
 ## ソースの読み方
 
-PLANの `cache` はcheckoutしないbare Gitリポジトリ、`commit` は今回の固定コミット。対象のファイルは実行せず、次のように読む。引数は必ずシェルで引用する。
+PLANの `source` は固定コミット `commit` のファイルを展開したフォルダ、`source_index` はその一覧（パス、バイト数、行数、展開の有無）。ファイルは `source` 配下をファイル読み取りツールで読み、出典の行番号は読んだ内容から取る。関連ファイルは1件ずつ往復せず、一覧で当たりを付けてまとめて読む。1MiBを超えるファイルや展開できなかったファイルは一覧に `expanded: false` と理由があり、必要なら下のGitコマンドで読む。`source` の内容はコミットの写しであり、編集や実行はしない。
+
+履歴は PLANの `cache`（checkoutしないbare Gitリポジトリ）から読む。引数は必ずシェルで引用する。
 
 ```sh
-git --literal-pathspecs --git-dir CACHE ls-tree -r --name-only COMMIT
-git --literal-pathspecs --git-dir CACHE show 'COMMIT:skills/example/SKILL.md'
 git --literal-pathspecs --git-dir CACHE log COMMIT --format='%H %aI %s' -- skills/example
 git --literal-pathspecs --git-dir CACHE show COMMIT_HASH -- skills/example
+git --literal-pathspecs --git-dir CACHE show 'COMMIT:skills/example/SKILL.md'
 ```
 
-`--literal-pathspecs` はサブコマンドより前に置き、角括弧や `:(...)` を含むパスをGitの検索指定にしない。作成時点は `log --reverse`、移動前の履歴は `log --follow -- PATH/SKILL.md` で調べ、最初の数件で打ち切って「初版」と判断しない。
+`--literal-pathspecs` はサブコマンドより前に置き、角括弧や `:(...)` を含むパスをGitの検索指定にしない。作成時点は `log --reverse`、移動前の履歴は `log --follow -- PATH/SKILL.md` で調べ、最初の数件で打ち切って「初版」と判断しない。履歴の一覧を先に取り、差分を読むのは説明に必要なコミットに絞る。
 
 SKILL.mdの起動条件、入力・出力、手順の順番、確認のタイミング、参照資料の使い分け、スクリプトへ分けた処理を読み解く。参照をたどって関連ファイルを一覧にし、本文が短く別のスキルを呼ぶだけなら呼び出し先まで読む。入口の短さと処理の単純さを混同しない。設定ファイルは、利用者やエージェントがいつその処理に入るかという観点で確認する。対象スキルのフォルダ外で読んだファイルは `complete --dependency PATH` にすべて登録する。
 
@@ -70,18 +71,13 @@ QOCのメモとして、経緯は日付とコミット名を集めるだけで�
 
 ## PR・Issue
 
-PLANの `github_index` に、Issues APIから全ページ取得したIssue/PRの索引がある。タイトル、番号、更新日時、コメント数から関連する項目を探し、上位数件だけで存在しないと判断しない。詳細は必要な項目だけGitHub CLIで取得し、PRの本文・コメント・レビュー・変更ファイルをSKILL.mdの変更と対応づける。
+PLANの `github_index` に、Issues APIから全ページ取得したIssue/PRの索引がある。タイトル、番号、更新日時、コメント数から関連する項目を探し、上位数件だけで存在しないと判断しない。詳細は必要な番号を選び、補助CLIで1回にまとめて取得する。
 
 ```sh
-gh api --hostname github.com repos/OWNER/REPO/issues/NUMBER
-gh api --hostname github.com --paginate repos/OWNER/REPO/issues/NUMBER/comments
-gh api --hostname github.com repos/OWNER/REPO/pulls/NUMBER
-gh api --hostname github.com --paginate repos/OWNER/REPO/pulls/NUMBER/reviews
-gh api --hostname github.com --paginate repos/OWNER/REPO/pulls/NUMBER/comments
-gh api --hostname github.com --paginate repos/OWNER/REPO/pulls/NUMBER/files
+node "TOOL_ROOT/dist/cli.js" discussion PLAN --number 12 --number 34
 ```
 
-必要な履歴とコメントはページ末尾まで読む。APIの失敗・権限不足・レート制限は「未確認」と記録し、取得できた範囲を示す。PRレビューだけの変化など、Issues APIの更新日時に反映されない変更は索引で検知できないため、その再確認にも `--refresh` を使う。
+応答の `items` は番号ごとに、本文 `issue`、コメント `comments`（全ページ）、PRなら `pull`・`reviews`・`review_comments`・`files` を持つ。発言者は `user` と `bot` で示され、botの発言は作者の説明と区別する。取得できなかったエンドポイントは `errors` に残るので、その箇所は未確認と記録する。PRの本文・コメント・レビュー・変更ファイルをSKILL.mdの変更と対応づける。APIの失敗・権限不足・レート制限は「未確認」と記録し、取得できた範囲を示す。PRレビューだけの変化など、Issues APIの更新日時に反映されない変更は索引で検知できないため、その再確認にも `--refresh` を使う。
 
 ## 利用者が指定した重点
 

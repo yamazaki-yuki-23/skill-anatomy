@@ -7,7 +7,7 @@ export const REPORT_BYTES_GUIDE = 20000;
 export function timestamp() {
   return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 }
-function readPlan(planFile) {
+export function readPlan(planFile) {
   let plan;
   try {
     plan = readJson(planFile);

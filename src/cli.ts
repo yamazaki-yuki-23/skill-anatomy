@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { parseArgs } from 'node:util';
 import type { ParseArgsOptionsConfig } from 'node:util';
-import { prepare } from './anatomy.js';
+import { discussion, prepare } from './anatomy.js';
 import { isReportFormat } from './html.js';
 import { approve, checkHtml, complete, status } from './state.js';
 import { defaultWorkspace } from './workspace.js';
@@ -20,7 +20,11 @@ const HELP = `GitHubスキルの分析準備・差分検出・完了記録
     分析ファイルを保存した後に完了状態を記録する
   check-html PLAN (--skill PATH/SKILL.md | --repository)
     Markdownの隣に保存したHTML版が安全条件を満たすか検査する
+  discussion PLAN --number N [--number N ...]
+    Issue・PRの本文、コメント、レビュー、変更ファイルを1回で取得する
 
+prepareは固定コミットのファイルを保存先の.cache/sources/に展開し、
+パス・バイト数・行数の索引を書く（応答と PLAN の source / source_index）。
 保存先: SKILL_ANATOMY_WORKSPACE、clone元、実行中の作業フォルダの順で判別。
 --workspace PATHはレポートとキャッシュの保存先を指定し、上記より優先する。
 旧オプション--tool-rootは使用できない。--workspaceに置き換える。
@@ -38,7 +42,7 @@ function main(args: string[]): unknown {
     console.log('0.7.0');
     return;
   }
-  if (!['prepare', 'approve', 'status', 'complete', 'check-html'].includes(command))
+  if (!['prepare', 'approve', 'status', 'complete', 'check-html', 'discussion'].includes(command))
     throw new Error(`不明なコマンドです: ${command}`);
   const options: ParseArgsOptionsConfig = { help: { type: 'boolean', short: 'h' } };
   if (command === 'prepare')
@@ -56,6 +60,8 @@ function main(args: string[]): unknown {
     });
   if (command === 'complete')
     Object.assign(options, { dependency: { type: 'string', multiple: true } });
+  if (command === 'discussion')
+    Object.assign(options, { number: { type: 'string', multiple: true } });
   const parsed = parseArgs({ args: rest, allowPositionals: true, strict: true, options });
   if (parsed.values.help) {
     console.log(HELP);
@@ -81,6 +87,8 @@ function main(args: string[]): unknown {
   }
   if (command === 'approve') return approve(input!);
   if (command === 'status') return status(input!);
+  if (command === 'discussion')
+    return discussion(input!, (values.number as string[] | undefined) ?? []);
   const skill = values.skill as string | undefined;
   const repository = values.repository === true;
   if (Boolean(skill) === repository)

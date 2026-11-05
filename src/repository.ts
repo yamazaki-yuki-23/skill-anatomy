@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { inside } from './storage.js';
-import type { Files, GithubIndex, Target } from './types.js';
+import type { DiscussionItem, Files, GithubIndex, Target } from './types.js';
 export function run(program: string, args: string[]): string {
   const result = spawnSync(program, args, {
     env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
@@ -18,6 +18,20 @@ export function run(program: string, args: string[]): string {
 }
 export function git(cache: string, args: string[]): string {
   return run('git', ['-c', 'core.hooksPath=/dev/null', '--git-dir', cache, ...args]);
+}
+export function gitBuffer(cache: string, args: string[], input: string): Buffer {
+  const result = spawnSync('git', ['-c', 'core.hooksPath=/dev/null', '--git-dir', cache, ...args], {
+    env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+    input,
+    maxBuffer: 1024 * 1024 * 1024,
+    windowsHide: true,
+  });
+  if (result.error) throw new Error(`gitを起動できません: ${result.error.message}`);
+  if (result.status !== 0)
+    throw new Error(
+      `gitの実行に失敗: ${result.stderr?.toString('utf8').trim() || result.signal || result.status}`,
+    );
+  return result.stdout;
 }
 export function parseUrl(input: string): Target {
   let url: URL;
@@ -163,4 +177,129 @@ export function fetchIndex(target: Target): GithubIndex {
   } catch (error) {
     return { status: 'unavailable', items: [], error: (error as Error).message };
   }
+}
+function api(endpoint: string, paginate: boolean): unknown {
+  const args = paginate ? ['--paginate', '--slurp'] : [];
+  const parsed: unknown = JSON.parse(
+    run('gh', ['api', '--hostname', 'github.com', ...args, endpoint]),
+  );
+  if (!paginate) return parsed;
+  if (!Array.isArray(parsed) || parsed.some((page) => !Array.isArray(page)))
+    throw new Error('GitHubの応答形式が不正です');
+  return parsed.flat();
+}
+type Picked = Record<string, unknown>;
+function pick(value: unknown, keys: string[]): Picked | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const record = value as Record<string, unknown>;
+  const picked: Picked = {};
+  for (const key of keys) {
+    const item = record[key];
+    if (key === 'user') {
+      const user = typeof item === 'object' && item !== null ? (item as Picked) : null;
+      picked.user = user?.login ?? null;
+      picked.bot = user?.type === 'Bot';
+    } else if (key === 'labels')
+      picked.labels = Array.isArray(item)
+        ? item.map((label) =>
+            typeof label === 'object' && label !== null && 'name' in label ? label.name : label,
+          )
+        : [];
+    else if (key === 'head' || key === 'base')
+      picked[key] =
+        typeof item === 'object' && item !== null
+          ? { ref: (item as Picked).ref ?? null, sha: (item as Picked).sha ?? null }
+          : null;
+    else picked[key] = item ?? null;
+  }
+  return picked;
+}
+function pickAll(value: unknown, keys: string[]): Picked[] | null {
+  return Array.isArray(value) ? value.map((item) => pick(item, keys) ?? {}) : null;
+}
+const issueKeys = [
+  'number',
+  'title',
+  'state',
+  'user',
+  'labels',
+  'created_at',
+  'updated_at',
+  'closed_at',
+  'comments',
+  'html_url',
+  'body',
+];
+const commentKeys = ['id', 'user', 'created_at', 'html_url', 'body'];
+const pullKeys = [
+  'number',
+  'state',
+  'draft',
+  'merged_at',
+  'merge_commit_sha',
+  'head',
+  'base',
+  'commits',
+  'additions',
+  'deletions',
+  'changed_files',
+  'html_url',
+];
+const reviewKeys = ['id', 'user', 'state', 'commit_id', 'submitted_at', 'html_url', 'body'];
+const reviewCommentKeys = [
+  'id',
+  'user',
+  'path',
+  'line',
+  'original_line',
+  'in_reply_to_id',
+  'created_at',
+  'html_url',
+  'body',
+];
+const fileKeys = [
+  'filename',
+  'previous_filename',
+  'status',
+  'additions',
+  'deletions',
+  'changes',
+  'patch',
+];
+// Keeps the fields the analysis cites; avatars, reaction counts and API links are dropped.
+export function fetchDiscussion(target: Target, numbers: number[]): DiscussionItem[] {
+  const base = `repos/${target.owner}/${target.repo}`;
+  return numbers.map((number) => {
+    const item: DiscussionItem = {
+      number,
+      kind: 'unknown',
+      issue: null,
+      comments: null,
+      pull: null,
+      reviews: null,
+      review_comments: null,
+      files: null,
+      errors: [],
+    };
+    const fetch = (endpoint: string, paginate: boolean): unknown => {
+      try {
+        return api(`${base}/${endpoint}`, paginate);
+      } catch (error) {
+        item.errors.push({ endpoint, error: (error as Error).message });
+        return null;
+      }
+    };
+    const issue = fetch(`issues/${number}`, false);
+    if (issue === null) return item;
+    item.issue = pick(issue, issueKeys);
+    item.comments = pickAll(fetch(`issues/${number}/comments`, true), commentKeys);
+    const isPull = typeof issue === 'object' && 'pull_request' in issue;
+    item.kind = isPull ? 'pull' : 'issue';
+    if (!isPull) return item;
+    item.pull = pick(fetch(`pulls/${number}`, false), pullKeys);
+    item.reviews = pickAll(fetch(`pulls/${number}/reviews`, true), reviewKeys);
+    item.review_comments = pickAll(fetch(`pulls/${number}/comments`, true), reviewCommentKeys);
+    item.files = pickAll(fetch(`pulls/${number}/files`, true), fileKeys);
+    return item;
+  });
 }
