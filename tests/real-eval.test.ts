@@ -13,6 +13,8 @@ const context: RuleContext = {
   cache: '/caches/review-skills.git',
   reportPaths: () => ['/ws/reports/fixture-owner/review-skills/skill-analyses/review-brief.md'],
   githubIndex: () => '/ws/github-index.json',
+  sourceRoot: () => '/ws/.cache/sources/fixture-owner/review-skills/' + commit,
+  sourceIndex: () => '/ws/.cache/sources/fixture-owner/review-skills/' + commit + '.json',
   knownPath: (value) => ['SKILL.md', 'references', 'references/guide.md'].includes(value),
   resolveCommit: (spec) => (commit.startsWith(spec) ? commit : undefined),
   pathAtCommit: (at, value) => at === commit && value === 'old/guide.md',
@@ -94,6 +96,23 @@ test('allow rules pass --hostname, -- pathspecs, and --jq through to the fixed s
     kind: 'read_source',
     path: 'references/guide.md',
   });
+  const expanded = `/workspace/.cache/sources/fixture-owner/review-skills/${commit}`;
+  assert.deepEqual(decide('read_file', { path: `${expanded}/references/guide.md` }, context), {
+    kind: 'read_expanded',
+    path: `/ws/.cache/sources/fixture-owner/review-skills/${commit}/references/guide.md`,
+  });
+  assert.deepEqual(decide('read_file', { path: `${expanded}.json` }, context), {
+    kind: 'read',
+    path: `/ws/.cache/sources/fixture-owner/review-skills/${commit}.json`,
+  });
+  assert.deepEqual(
+    decide(
+      'run_command',
+      { program: 'node', args: ['/tool/dist/cli.js', 'discussion', '/plan.json', '--number', '7'] },
+      context,
+    ),
+    { kind: 'cli', args: ['discussion', '--number', '7'] },
+  );
   assert.deepEqual(
     decide(
       'run_command',
@@ -137,6 +156,22 @@ test('allow rules deny other hosts, unapproved endpoints, outside files, and exe
   );
   denied(
     decide('read_file', { path: '/ws/other.md' }, context),
+    'Read outside fixed source and report paths',
+  );
+  denied(
+    decide(
+      'read_file',
+      { path: `/workspace/.cache/sources/fixture-owner/review-skills/${commit}/missing.md` },
+      context,
+    ),
+    'Read outside fixed source and report paths',
+  );
+  denied(
+    decide(
+      'read_file',
+      { path: `/workspace/.cache/sources/fixture-owner/review-skills/${commit}/../other/SKILL.md` },
+      context,
+    ),
     'Read outside fixed source and report paths',
   );
   assert.equal(decide('read_file', { path: '/cache/source/missing.md' }, context).kind, 'error');

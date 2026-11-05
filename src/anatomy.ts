@@ -12,10 +12,18 @@ import {
 import path from 'node:path';
 import { digest, sorted, createSourceSigner } from './fingerprint.js';
 import { htmlPath } from './html.js';
-import { acquire, parseUrl, resolveTarget, fileInventory, fetchIndex } from './repository.js';
+import {
+  acquire,
+  parseUrl,
+  resolveTarget,
+  fileInventory,
+  fetchDiscussion,
+  fetchIndex,
+} from './repository.js';
+import { materializeSource } from './source.js';
 import { discover, reportPaths } from './skills.js';
 import { inside, readJson, writeJson, withStateLock } from './storage.js';
-import { VERSION, timestamp } from './state.js';
+import { VERSION, readPlan, timestamp } from './state.js';
 import type {
   Entry,
   GithubIndex,
@@ -64,6 +72,7 @@ function prepareSnapshotUnlocked(
   const files = fileInventory(cache, commit);
   const { allSkills, selected, scope } = discover(files, targetPath, kind);
   if (!selected.length) throw new Error('通常ファイルのSKILL.mdが見つかりませんでした');
+  const source = materializeSource(root, target, cache, commit, files);
   const destination = inside(root, `reports/${target.owner}/${target.repo}`);
   const stateFile = inside(destination, '.state.json');
   const state: State = existsSync(stateFile)
@@ -151,6 +160,8 @@ function prepareSnapshotUnlocked(
     state_file: stateFile,
     plan_file: planFile,
     github_index: indexFile,
+    source: source.directory,
+    source_index: source.index,
     index_status: index.status,
     index_hash: indexHash,
     approved: !!options.noConfirm,
@@ -177,6 +188,10 @@ function prepareSnapshotUnlocked(
     approved: plan.approved,
     format: plan.format,
     index_status: index.status,
+    source: source.directory,
+    source_index: source.index,
+    source_files: source.expanded,
+    source_skipped: source.skipped,
     discussion_updates: discussionUpdates,
     warning:
       [
@@ -239,4 +254,24 @@ function pruneKnownPlans(planRoot: string, active: Plan): string[] {
     }
   }
   return warnings;
+}
+
+export function discussion(planFile: string, numbers: string[]): unknown {
+  const plan = readPlan(planFile);
+  const parsed = numbers.map((value) => {
+    if (!/^[1-9]\d{0,8}$/.test(value)) throw new Error(`Issue・PR番号が不正です: ${value}`);
+    return Number(value);
+  });
+  if (!parsed.length) throw new Error('--number で Issue・PR番号を1つ以上指定してください');
+  const items = fetchDiscussion(
+    { owner: plan.owner, repo: plan.repo, tail: [] },
+    [...new Set(parsed)].sort((a, b) => a - b),
+  );
+  return {
+    repository: `${plan.owner}/${plan.repo}`,
+    items,
+    warning: items.some((item) => item.errors.length)
+      ? 'GitHub APIから取得できなかった項目があります。該当箇所は未確認と記録してください'
+      : null,
+  };
 }

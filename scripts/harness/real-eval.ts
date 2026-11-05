@@ -106,7 +106,7 @@ const gitFlagPrefixes = [
   '-G',
   '-U',
 ];
-const cliOperations = ['status', 'approve', 'complete', 'check-html'];
+const cliOperations = ['status', 'approve', 'complete', 'check-html', 'discussion'];
 
 // Allow rules decide what a tool call may do; execution happens separately so the rules are testable.
 export interface RuleContext {
@@ -118,6 +118,8 @@ export interface RuleContext {
   cache: string;
   reportPaths(): string[];
   githubIndex(): string;
+  sourceRoot(): string | undefined;
+  sourceIndex(): string | undefined;
   knownPath(value: string): boolean;
   resolveCommit(spec: string): string | undefined;
   pathAtCommit(commit: string, value: string): boolean;
@@ -127,6 +129,7 @@ export type Action =
   | { kind: 'error'; message: string }
   | { kind: 'path_info'; path: string }
   | { kind: 'read'; path: string }
+  | { kind: 'read_expanded'; path: string }
   | { kind: 'read_plan' }
   | { kind: 'read_source'; path: string }
   | { kind: 'read_tool'; path: string }
@@ -278,6 +281,17 @@ export function decide(name: string, args: Record<string, unknown>, context: Rul
     }
     const actual = devirtualize(context, filename);
     if (context.reportPaths().includes(actual)) return { kind: 'read', path: actual };
+    const sourceRoot = context.sourceRoot();
+    const relative = sourceRoot === undefined ? undefined : path.relative(sourceRoot, actual);
+    if (
+      relative !== undefined &&
+      relative !== '' &&
+      !relative.startsWith('..') &&
+      !path.isAbsolute(relative) &&
+      context.knownPath(relative.split(path.sep).join('/'))
+    )
+      return { kind: 'read_expanded', path: actual };
+    if (actual === context.sourceIndex()) return { kind: 'read', path: actual };
     return { kind: 'deny', reason: 'Read outside fixed source and report paths' };
   }
   if (name === 'write_file') {
@@ -394,6 +408,14 @@ function serveProfile(output: string): void {
       return paths;
     },
     githubIndex: () => String(plan().github_index),
+    sourceRoot: () => {
+      const value = plan().source;
+      return typeof value === 'string' ? value : undefined;
+    },
+    sourceIndex: () => {
+      const value = plan().source_index;
+      return typeof value === 'string' ? value : undefined;
+    },
     knownPath: (value) => treePaths.has(value) || treeDirs.has(value) || value === '.',
     resolveCommit(spec) {
       let full: string;
@@ -441,6 +463,17 @@ function serveProfile(output: string): void {
         if (!existsSync(action.path))
           return this.deny('Read outside fixed source and report paths');
         return readFileSync(action.path, 'utf8');
+      case 'read_expanded': {
+        // The expanded tree is what the skill reads in real use; never fall back to Git here.
+        let info;
+        try {
+          info = lstatSync(action.path);
+        } catch {
+          return { error: 'Expanded source file is missing; record as unverified' };
+        }
+        if (!info.isFile()) return this.deny('Expanded source entry is not a regular file');
+        return readFileSync(action.path, 'utf8');
+      }
       case 'read_tool':
         return readFileSync(path.join(toolRoot, action.path), 'utf8');
       case 'read_source':

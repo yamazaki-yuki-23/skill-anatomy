@@ -12,6 +12,29 @@ export interface PrepareOptions {
   refresh?: boolean;
   format?: ReportFormat;
 }
+export interface SourceIndexEntry {
+  path: string;
+  bytes: number;
+  lines: number | null;
+  expanded: boolean;
+  reason?: string;
+}
+export interface SourceIndex {
+  commit: string;
+  directory: string;
+  files: SourceIndexEntry[];
+}
+export interface DiscussionItem {
+  number: number;
+  kind: 'issue' | 'pull' | 'unknown';
+  issue: unknown;
+  comments: unknown[] | null;
+  pull: unknown;
+  reviews: unknown[] | null;
+  'review_comments': unknown[] | null;
+  files: unknown[] | null;
+  errors: { endpoint: string; error: string }[];
+}
 export interface GithubIndex {
   status: 'available' | 'unavailable';
   items: unknown[];
@@ -70,6 +93,8 @@ export interface Plan {
   'state_file': string;
   'plan_file': string;
   'github_index': string;
+  source: string;
+  'source_index': string;
   'index_status': GithubIndex['status'];
   'index_hash': string;
   approved: boolean;
