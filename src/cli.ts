@@ -39,7 +39,7 @@ function main(args: string[]): unknown {
     return;
   }
   if (['-V', '--version'].includes(command)) {
-    console.log('0.7.0');
+    console.log('0.8.0');
     return;
   }
   if (!['prepare', 'approve', 'status', 'complete', 'check-html', 'discussion'].includes(command))
