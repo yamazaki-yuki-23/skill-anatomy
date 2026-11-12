@@ -3,17 +3,17 @@ import { discussion, prepare } from "./anatomy.js";
 import { isReportFormat } from "./html.js";
 import { approve, checkHtml, complete, status } from "./state.js";
 import { defaultWorkspace } from "./workspace.js";
-const HELP = `GitHubスキルの分析準備・差分検出・完了記録
+const HELP = `GitHubスキルの分析準備・承認・完了記録
 
 使い方: node dist/cli.js <コマンド>
 
-  prepare URL [--no-confirm] [--refresh] [--format markdown|html] [--workspace PATH]
-    URLを判別し、索引・差分・再開位置を準備する
+  prepare URL [--no-confirm] [--format markdown|html] [--workspace PATH]
+    URLを判別し、固定コミットの展開・索引・分析方針を準備する。選択範囲は毎回すべて書き直す
   approve PLAN
     ユーザーが分析方針にOKした後に承認を記録する
   status PLAN
     選択対象ごとの現在の状態、全体分析の完了状態、HTML版の有無を確認する
-  complete PLAN (--skill PATH/SKILL.md | --repository) [--dependency PATH ...]
+  complete PLAN (--skill PATH/SKILL.md | --repository)
     分析ファイルを保存した後に完了状態を記録する
   check-html PLAN (--skill PATH/SKILL.md | --repository)
     Markdownの隣に保存したHTML版が安全条件を満たすか検査する
@@ -44,7 +44,6 @@ function main(args) {
   if (command === "prepare")
     Object.assign(options, {
       "no-confirm": { type: "boolean" },
-      refresh: { type: "boolean" },
       format: { type: "string" },
       workspace: { type: "string" },
       "tool-root": { type: "string" }
@@ -54,8 +53,6 @@ function main(args) {
       skill: { type: "string" },
       repository: { type: "boolean" }
     });
-  if (command === "complete")
-    Object.assign(options, { dependency: { type: "string", multiple: true } });
   if (command === "discussion")
     Object.assign(options, { number: { type: "string", multiple: true } });
   const parsed = parseArgs({ args: rest, allowPositionals: true, strict: true, options });
@@ -77,7 +74,6 @@ function main(args) {
       url: input,
       workspace: values.workspace ?? defaultWorkspace(),
       noConfirm: values["no-confirm"] === true,
-      refresh: values.refresh === true,
       format
     });
   }
@@ -93,10 +89,7 @@ function main(args) {
     throw new Error("--skillか--repositoryのどちらか1つを指定してください");
   if (command === "check-html")
     return checkHtml(input, skill, repository);
-  const dependencies = values.dependency ?? [];
-  if (dependencies.length && !skill)
-    throw new Error("--dependencyは--skillと一緒に指定してください");
-  return complete(input, skill, repository, dependencies);
+  return complete(input, skill, repository);
 }
 try {
   const result = main(process.argv.slice(2));

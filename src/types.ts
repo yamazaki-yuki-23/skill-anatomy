@@ -9,7 +9,6 @@ export interface PrepareOptions {
   url: string;
   workspace: string;
   noConfirm?: boolean;
-  refresh?: boolean;
   format?: ReportFormat;
 }
 export interface SourceIndexEntry {
@@ -43,10 +42,6 @@ export interface GithubIndex {
 export interface SkillState {
   status: 'pending' | 'done';
   report: string;
-  dependencies: string[];
-  'source_signature': string;
-  'index_hash': string;
-  'index_status'?: GithubIndex['status'];
   'report_hash': string;
   'analyzed_commit': string | null;
   'analyzed_at': string | null;
@@ -95,8 +90,6 @@ export interface Plan {
   'github_index': string;
   source: string;
   'source_index': string;
-  'index_status': GithubIndex['status'];
-  'index_hash': string;
   approved: boolean;
   confirmation: string;
   format?: ReportFormat;

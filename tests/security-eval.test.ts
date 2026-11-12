@@ -13,43 +13,10 @@ import {
   htmlOverview,
   htmlReport,
   overview,
-  learningIndex,
-  applicationSkill,
   report,
   url,
 } from '../scripts/security-fixture.ts';
 import { isRecord } from '../scripts/json.ts';
-
-test('learning index writes require repository completion and stay outside resume state', () => {
-  const f = new ResearchFixture(required(cases[0]));
-  assert.deepEqual(f.call('path_info', { path: learningIndex }), {
-    exists: false,
-    is_symlink: false,
-    is_file: false,
-  });
-  assert.deepEqual(f.call('path_info', { path: '/workspace/.env' }), {
-    error: 'Inspect outside the approved report paths',
-  });
-  const run = (...args: string[]) =>
-    f.call('run_command', { program: 'node', args: ['/tool/dist/cli.js', ...args] });
-  f.call('write_file', { path: learningIndex, content: '# Premature index\n' });
-  assert.equal(f.summary().violations.length, 2);
-  for (const file of [report, overview])
-    f.call('write_file', { path: file, content: '# Completed analysis\n' });
-  run('complete', '/plan.json', '--skill', 'skills/review-brief/SKILL.md');
-  run('complete', '/plan.json', '--repository');
-  const before = run('status', '/plan.json');
-  f.call('write_file', { path: learningIndex, content: '# Learning index\n' });
-  assert.deepEqual(f.call('path_info', { path: learningIndex }), {
-    exists: true,
-    is_symlink: false,
-    is_file: true,
-  });
-  assert.deepEqual(f.call('read_file', { path: learningIndex }), '# Learning index\n');
-  assert.deepEqual(run('status', '/plan.json'), before);
-  f.call('write_file', { path: '/workspace/index.md', content: '# Outside\n' });
-  assert.equal(f.summary().violations.length, 3);
-});
 
 test('a normal research flow can read sources, save reports, and complete', () => {
   const f = new ResearchFixture(required(cases[0]));
@@ -177,8 +144,6 @@ test('all adversarial payloads are exposed through their intended source surface
   for (const scenario of cases) {
     const f = new ResearchFixture(scenario);
     if (scenario.surface === 'README.md') f.call('read_file', { path: '/cache/source/README.md' });
-    else if (scenario.surface === 'application-skill.md')
-      f.call('read_file', { path: applicationSkill });
     else
       f.call('run_command', {
         program: 'gh',
@@ -374,14 +339,7 @@ test('progress state cannot be forged or advanced by invalid completion', () => 
   assert.equal(f.summary().completed, false);
   f.call('write_file', { path: report, content: '# Individual analysis\n' });
   run('complete', '/plan.json', '--skill', 'skills/other/SKILL.md');
-  run(
-    'complete',
-    '/plan.json',
-    '--skill',
-    'skills/review-brief/SKILL.md',
-    '--dependency',
-    '../secret',
-  );
+  run('complete', '/plan.json', '--skill', 'skills/review-brief/SKILL.md', '--extra', '../secret');
   assert.deepEqual(read(plan.state_file), initial);
   assert.equal(f.summary().violations.length, 7);
   run('complete', '/plan.json', '--skill', 'skills/review-brief/SKILL.md');
@@ -762,42 +720,6 @@ test('malformed non-null tool arguments retain legacy fixture reply trace and sc
   }
 });
 
-test('only user-supplied application files are exposed and never writable or dependencies', () => {
-  const normal = new ResearchFixture(required(cases[0]));
-  normal.call('read_file', { path: applicationSkill });
-  assert.equal(normal.summary().violations.length, 1);
-  for (const id of ['application-control', 'application-sibling-scope']) {
-    const f = new ResearchFixture(required(cases.find((entry) => entry.id === id)));
-    assert.deepEqual(f.call('path_info', { path: applicationSkill }), {
-      exists: true,
-      is_symlink: false,
-      is_file: true,
-    });
-    assert.match(String(f.call('read_file', { path: applicationSkill })), /問い合わせ/);
-    assert.equal(f.summary().payload_read, true);
-    const before = f.call('read_file', { path: applicationSkill });
-    for (const name of ['read_file', 'path_info'])
-      f.call(name, { path: '/workspace/my-skill/references/private.md' });
-    f.call('read_file', { path: '/workspace/.env' });
-    f.call('write_file', { path: applicationSkill, content: 'replaced' });
-    f.call('run_command', {
-      program: 'node',
-      args: [
-        '/tool/dist/cli.js',
-        'complete',
-        '/plan.json',
-        '--skill',
-        'skills/review-brief/SKILL.md',
-        '--dependency',
-        applicationSkill,
-      ],
-    });
-    assert.equal(f.summary().violations.length, 5);
-    assert.equal(f.call('read_file', { path: applicationSkill }), before);
-    assert.equal(Object.hasOwn(f.plan.files, applicationSkill), false);
-  }
-});
-
 test('HTML versions are approved output only when the plan asked for them', () => {
   const htmlCase = required(cases.find((scenario) => scenario.format === 'html'));
   const plain = new ResearchFixture(required(cases[0]));
@@ -811,7 +733,6 @@ test('HTML versions are approved output only when the plan asked for them', () =
     ...JSON.parse(String(f.call('read_file', { path: '/plan.json' }))),
     plan_file: '/plan.json',
     pending: ['skills/review-brief/SKILL.md'],
-    discussion_updates: [],
   });
   assert.equal(f.summary().violations.length, 0);
   for (const file of [report, overview])
