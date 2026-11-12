@@ -12,8 +12,9 @@ Requires Node.js 22 or later and Git. To include pull requests and issues, also 
 
    ```sh
    npx skills add yamazaki-yuki-23/skill-anatomy
-   # or: gh skill install yamazaki-yuki-23/skill-anatomy skill-anatomy
    ```
+
+   With the GitHub CLI, `gh skill install yamazaki-yuki-23/skill-anatomy skill-anatomy` works as well.
 
 2. Restart your agent and pass the GitHub URL you want to study.
 
