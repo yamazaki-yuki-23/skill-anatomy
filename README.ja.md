@@ -12,8 +12,9 @@ Node.js 22以上とGitが必要です。PR・Issueも調べる場合は、GitHub
 
    ```sh
    npx skills add yamazaki-yuki-23/skill-anatomy
-   # または: gh skill install yamazaki-yuki-23/skill-anatomy skill-anatomy
    ```
+
+   GitHub CLIを使う場合は `gh skill install yamazaki-yuki-23/skill-anatomy skill-anatomy` でもインストールできます。
 
 2. エージェントを再起動し、調べたいGitHubのURLを渡します。
 
