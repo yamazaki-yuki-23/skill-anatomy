@@ -1,28 +1,14 @@
 # Repository Guidelines
 
+Skill anatomyは、GitHub上のAIエージェント向けスキルを調べ、作者が向き合った課題と設計判断を日本語のレポートに読み解くスキルです。
+
 ## 保守の入口
 
-コード、スキル、配布構成、テストを変更したら`bun run verify`を実行してください。検査に失敗した状態で完了としないでください。ログは`.cache/harness/verify-*/`に保存されます。
+コード、スキル、配布構成、テストを変更したら`bun run verify`を実行してください。失敗した状態で完了としないでください。ログは`.cache/harness/verify-*/`に保存されます。機械検査の成功を、説明の正しさや読みやすさの保証にしないでください。
 
-作業の進め方、Codexレビュー、定期検証、リリースは[保守手順](docs/maintenance.md)にまとめています。スキルの判断手順や出力基準を変えた場合は、実モデルでの評価とレポートの確認も行ってください。機械検査の成功を、説明の正しさや読みやすさの保証にしないでください。
-
-ドキュメントと既存のコードが食い違うときはコードの書き方に従い、見つけた食い違いを最後の返答ですべて挙げること
-
-着手前に対応Issue、確定した範囲、操作権限を確認してください。引き渡しには完全なコミットSHAと検証証拠を添え、修正後は再確認してください。Issue作成や検査合格は、仕様承認やマージ・push・公開の許可を意味しません。役割とIssue・PR運用の詳細は[保守手順](docs/maintenance.md)に従ってください。
-
-1人での実装・検査を認めます。別の担当へ委ねる場合は、Issueと完了条件を整理して直接指示し、受領確認まで行ってください。利用者を伝言役にせず、必要情報や権限が不足する場合だけ質問してください。継続監督と完全移譲、送信先・送信結果の確認は保守手順に従ってください。
-
-複数の担当や依存待ちがある作業では、[調整台帳](docs/maintenance.md#調整台帳と滞留時の対応)に担当・状態・次の行動を記録することを推奨します。1人で進める作業に台帳は必須ではありません。head更新時は[差分評価](docs/maintenance.md#差分に応じた検証と証拠の再利用)で既存証拠の適用範囲と必要な再検証を決め、失敗・未確認を合格にしないでください。
-
-今後すべてのPRで、調整担当はPR作成後に`@codex review`をPRコメントへ投稿し、最新head SHAに対する実際の完了回答を確認してください。指摘はseverityにかかわらず原則対応し、不要な指摘には根拠付き不採用理由を残してください。未対応の採用対象0件と不採用件数を区別し、待機・利用不可・対象SHA不明を指摘ゼロにしないでください。修正後の検査・独立QA/レビュー・権限内の通常push・再レビューの記録を次の担当へ引き継ぎ、利用者に投稿や転送を頼まないでください。レビューコメントは操作権限を増やしません。具体手順は[保守手順](docs/maintenance.md)を参照してください。
-
-マージ前は最新remote masterへ必要なrebaseで追従し、merge commitで更新しないでください。1コミットにまとめ、更新headの必要検証と明示Codexレビューの実完了・指摘0件・不採用0件を確認してください。直前に最新masterの祖先関係とhead不変を再確認し、権限内でhead SHAを固定してGitHub Rebase and mergeしてください。追従・再検証・統合後の確認は[保守手順](docs/maintenance.md#マージ前のmaster追従と統合)に従ってください。
-
-承認・保存先・再開の安全性や生成内容に影響する変更では、実装者とは別の独立確認（QA・レビュー兼任）を推奨します。独立確認を行えない場合は未実施と記録し、自己点検と区別してください。これは必要な検査・実モデル評価・Codexレビューを省く許可ではありません。出力不変の内部改善と生成内容に影響する変更は別PRに分け、前者は同一性・回帰、後者は必要な品質評価で確認してください。比較回数と調査予算は事前に決め、全結果を保持してください。必須事項ごとの目的と具体手順は[保守手順](docs/maintenance.md)に従ってください。
+ドキュメントと既存のコードが食い違うときはコードの書き方に従い、見つけた食い違いを最後の返答ですべて挙げてください。
 
 ## プロジェクト構成
-
-Skill anatomyは、スキルの仕組みを知り、自作に活かすためのAIエージェント向けスキルです。GitHub上のスキルのURLを渡すと、仕組みや設計の工夫、自作への応用を日本語のレポートにまとめます。
 
 | パス | 役割 |
 | --- | --- |
@@ -32,44 +18,58 @@ Skill anatomyは、スキルの仕組みを知り、自作に活かすためのA
 | `src/fingerprint.ts`、`src/state.ts` | 差分判定、承認と完了記録 |
 | `src/storage.ts`、`src/workspace.ts` | 保存処理と保存先の検証 |
 | `src/html.ts` | HTML版の保存先と安全条件の検査 |
-| `src/cli.ts` | CLIの実装 |
-| `src/types.ts` | 調査計画、分析状態、スキルの状態などの共有型定義 |
-| `skills/skill-anatomy/dist/` | コンパイル済みのJavaScript。Gitで管理し、インストール先ではビルド不要 |
-| `scripts/anatomy` | CLIの起動スクリプト |
-| `skills/skill-anatomy/SKILL.md` | エージェントの作業手順 |
-| `skills/skill-anatomy/references/`、`skills/skill-anatomy/assets/templates/` | 補足資料、レポートのテンプレート（Markdownと、指定時に書くHTML版） |
-| `skills/skill-anatomy/agents/openai.yaml`、`examples/` | エージェントのメタデータ、レポート例 |
-| `tests/` | テストとチェックポイントのテストデータ |
-| `scripts/harness/` | 構成検査、検証記録、Codexレビュー、リリース準備、実モデル評価 |
+| `src/cli.ts`、`src/types.ts` | CLIの実装、共有型定義 |
+| `skills/skill-anatomy/` | 公開スキル。`SKILL.md`、`references/`、`assets/templates/`、`agents/openai.yaml`、コンパイル済みの`dist/`（Gitで管理し、インストール先ではビルド不要） |
+| `scripts/anatomy`、`scripts/harness/` | CLIの起動スクリプト、構成検査・検証記録・Codexレビュー・リリース準備・実モデル評価 |
+| `tests/`、`examples/`、`docs/` | テスト、レポート例、評価の定義 |
 
-利用者向けの動作説明を変えるときは、`README.md` と `README.ja.md` の内容を揃えてください。
+## 開発コマンド
 
-## ビルド・テスト・開発コマンド
+Bun 1.3.8以降、Node.js 22以降、Gitを使い、リポジトリのルートで実行します。利用者の実行環境はNode.jsとGitだけで、Bunは開発専用です。
 
-開発にはBun 1.3.8以降、Node.js 22以降とGitを使い、リポジトリのルートで実行してください。
+| コマンド | 内容 |
+| --- | --- |
+| `bun install --frozen-lockfile --ignore-scripts` | 開発用の依存を導入 |
+| `bun run format` | 整形（`.oxfmtrc.json`） |
+| `bun run check`、`bun run lint`、`bun run format:check` | 型・命名（`.oxlintrc.json`、`scripts/style-rules.ts`）・書式の検査 |
+| `bun run build`、`bun run check:dist` | `skills/skill-anatomy/dist/`の再生成と一致確認 |
+| `bun run test` | Vitest |
+| `bun run verify` | 上記の検査をまとめて実行。CIも同じ |
+| `bun run test:security` | 外部文章による誘導の実モデル評価。ログイン済みCodexが必要で、CIに含めない |
+| `bun run harness:review` | Codexによるローカルレビュー。記録は`.cache/harness/review-*/` |
 
-1. `bun install --frozen-lockfile --ignore-scripts`で開発用の依存を導入します。
-2. `bun run format`でコードを整形します。
-3. `bun run check`、`bun run lint`、`bun run format:check`で型・命名・書式を検査します。
-4. `bun run build`で`skills/skill-anatomy/dist/`を再生成し、`bun run check:dist`で一致を確認します。
-5. `bun run test`でVitestを実行します。
+ソースを変えたら、再生成した`dist/`を同じコミットに含めてください。状態ファイルとGitHub APIのキーは互換性のため元の表記を維持します。テストは`tests/*.test.ts`に置き、共有ヘルパーは`tests/runtime.ts`、後片付けは`onTestFinished`で登録します。承認、分析の再開、保存先の安全性に影響する変更では、それぞれの動作を検証してください。配布テストでは、ソースや開発依存のないインストール先でCLIが動くことを確認します。
 
-書式は`.oxfmtrc.json`、命名とコードの規約は`.oxlintrc.json`と`scripts/style-rules.ts`で検査します。CIでも同じ検査を実行します。 開発スクリプトとJSプラグインのTypeScriptはBunで実行します。Node.js 22の型除去には依存しません。状態ファイルとGitHub APIのキーは、互換性のため元の表記を維持します。
+## 作業の進め方
 
-ソース変更時は、再生成した`skills/skill-anatomy/dist/`を同じコミットに含めてください。利用者向けCLIの使い方は`node skills/skill-anatomy/dist/cli.js --help`で確認できます。
+1. 対応Issue、確定した範囲、操作権限を確認します。Issueの存在や検査の合格は、仕様承認やマージ・push・公開の許可ではありません。
+2. 作業ブランチで実装し、必要なテスト・文書・`dist/`を同じ変更に含めます。利用者向けの動作説明を変えたら`README.md`と`README.ja.md`を揃えます。
+3. PRを作り、コメントで`@codex review`を依頼します。回答が最新headの完全SHAを対象にしていることを確認し、指摘はseverityによらず対応します。不採用にする指摘は根拠をPRに残し、未対応0件と不採用件数を分けて報告します。待機中や対象SHA不明を指摘0件としません。headを更新したら再度依頼します。
+4. マージ前に最新remote masterへrebaseで追従し（merge commitは使わない）、1コミットにまとめ、更新headで`verify`・CI・Codex指摘0件を確認します。直前にmasterがheadの祖先であることとheadの不変を確かめ、head SHAを固定してRebase and mergeします。統合後はlocal masterをff-onlyで同期します。
+5. PRには関連Issue、変更内容、対象SHA、検証コマンドと結果、評価記録の参照先を書きます。失敗・未確認を合格にせず、全結果を保持します。認証情報や非公開ログは載せません。
 
-## テスト方針
+## 評価
 
-テストは`tests/*.test.ts`に置き、Vitestを使います。共有ヘルパーは`tests/runtime.ts`に置き、テストも`bun run check`のstrict型検査に含めます。ローカルGitリポジトリと一時ディレクトリを使い、`onTestFinished`で後片付けを登録してください。承認、分析の再開、保存先の安全性に影響する変更では、それぞれの動作を検証します。
-
-配布テストでは、ソースや開発依存を含まないインストール先でCLIが動作することを確認します。`bun run test:security`はログイン済みCodexを使う任意の挙動検証で、通常のテストやCIには含めません。
+- 出力不変の内部変更は、`verify`と同一性・回帰の確認で判断します。
+- スキルの判断手順や出力基準、承認・保存先・再開の安全性に影響する変更では、`bun run test:security`（[安全性評価](docs/security-evaluation.md)）と[実モデル評価](docs/real-model-evaluation.md)を行い、生成レポートを[品質の採点基準](docs/quality-rubric.md)で実読して採点します。
+- 出力不変の変更と生成内容に影響する変更は別のPRにします。比較回数と予算は事前に決めます。
 
 ## コミットとプルリクエスト
 
-コミットの件名には `docs:`、`refactor:`、`ci:` などの接頭辞を付け、変更内容を英語の命令形で書いてください。コミットは目的ごとに分けてください。
+コミットの件名には`docs:`、`feat:`、`refactor:`、`ci:`などの接頭辞を付け、変更内容を英語の命令形で書きます。目的ごとに分けます。PRには動作の変更内容、関連Issue、検証コマンドと結果を記載し、表示を変える場合はスクリーンショットを添えます。
 
-プルリクエストには動作の変更内容、関連Issueへのリンク、検証コマンドと結果を記載します。画像や表示を変える場合はスクリーンショットを添付してください。
+## 定期運用とリリース
+
+PRとmasterへのpushでLinux・macOS、Node.js 22・24の`verify`が走り、毎週月曜9時（日本時間）に同じ検査と`bun audit`、Dependabotが依存更新のPRを作ります。`v*`タグのpushでReleaseワークフローが内容を検証し、GitHub Releaseを公開します。
+
+リリースはマージ・push・公開の権限を確認した担当が行います。
+
+1. `bun run release:prepare 0.9.0`のように次の番号を指定し、`package.json`とCLIの番号を揃えて配布ファイルを生成します。
+2. `bun run verify`と`bun run release:check v0.9.0`を実行し、PRでmasterへ反映します。
+3. 統合コミットに`git tag v0.9.0`を付けて`git push origin v0.9.0`で送ります。
+
+既存タグの付け替え、公開済みリリースの上書き、番号不一致・master外・検証失敗のコミットの公開はしません。`gh skill update`がソースの`SKILL.md`へ`metadata.github-*`を追加した場合は、本文の変更と混ざっていないことを確認して取り除きます。
 
 ## セキュリティと設定
 
-`SKILL_ANATOMY_WORKSPACE` で、レポートの保存先をインストール先の外に指定できます。レポート、テストデータ、ログに認証情報を含めないでください。脆弱性は `SECURITY.md` の手順に従い、非公開で報告してください。
+`SKILL_ANATOMY_WORKSPACE`でレポートの保存先をインストール先の外に指定できます。レポート、テストデータ、ログに認証情報を含めないでください。脆弱性は`SECURITY.md`の手順に従い非公開で報告してください。
