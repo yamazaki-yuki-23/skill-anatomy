@@ -15,7 +15,7 @@ Skill anatomyは、GitHub上のAIエージェント向けスキルを調べ、�
 | `src/anatomy.ts` | 調査計画の作成 |
 | `src/repository.ts`、`src/skills.ts` | Git取得、URL判別、スキル検出、Issue・PRの一括取得 |
 | `src/source.ts` | 固定コミットのファイル展開と索引 |
-| `src/fingerprint.ts`、`src/state.ts` | 差分判定、承認と完了記録 |
+| `src/hash.ts`、`src/state.ts` | ハッシュ、承認と完了記録 |
 | `src/storage.ts`、`src/workspace.ts` | 保存処理と保存先の検証 |
 | `src/html.ts` | HTML版の保存先と安全条件の検査 |
 | `src/cli.ts`、`src/types.ts` | CLIの実装、共有型定義 |

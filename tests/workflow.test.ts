@@ -18,13 +18,12 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { test, onTestFinished } from 'vitest';
 import { approve, checkHtml, complete, status } from '../src/state.ts';
-import { canonicalJson, digest } from '../src/fingerprint.ts';
 import { discover, reportPaths } from '../src/skills.ts';
 import { inside, readJson, withStateLock } from '../src/storage.ts';
 import { parseUrl, resolveTarget } from '../src/repository.ts';
 import { prepareSnapshot, pruneSupersededPlans } from '../src/anatomy.ts';
 
-import type { Plan, State, GithubIndex, Files } from '../src/types.js';
+import type { Plan, State, GithubIndex } from '../src/types.js';
 
 const cli = fileURLToPath(new URL('../skills/skill-anatomy/dist/cli.js', import.meta.url));
 interface Prepared {
@@ -38,7 +37,6 @@ interface Prepared {
     'index_status': string;
     format?: string;
     warning: string | null;
-    'discussion_updates': string[];
   };
   plan: Plan;
   planFile: string;
@@ -91,12 +89,11 @@ class Fixture {
     this.git('add', '.');
     this.git('commit', '-m', message);
   }
-  prepare(suffix = '', noConfirm = false, refresh = false): Prepared {
+  prepare(suffix = '', noConfirm = false): Prepared {
     const options = {
       url: `https://github.com/Alice/Agent-Skills${suffix}`,
       workspace: this.root,
       noConfirm,
-      refresh,
     };
     const result = prepareSnapshot(
       options,
@@ -114,8 +111,6 @@ class Fixture {
     assert.ok(typeof result.total_skills === 'number');
     assert.ok(typeof result.index_status === 'string');
     assert.ok(result.warning === null || typeof result.warning === 'string');
-    const discussionUpdates = result.discussion_updates ?? [];
-    assert.ok(isStringArray(discussionUpdates));
     const preparedResult = {
       ...result,
       'plan_file': result.plan_file,
@@ -126,7 +121,6 @@ class Fixture {
       'total_skills': result.total_skills,
       'index_status': result.index_status,
       warning: result.warning,
-      'discussion_updates': discussionUpdates,
     };
     return {
       result: preparedResult,
@@ -134,12 +128,12 @@ class Fixture {
       planFile: result.plan_file,
     };
   }
-  finish(prepared: Prepared, skill: string, dependencies: string[] = []) {
+  finish(prepared: Prepared, skill: string) {
     const entry = prepared.plan.skills.find((e) => e.skill === skill);
     assert.ok(entry);
     mkdirSync(path.dirname(entry.report), { recursive: true });
     writeFileSync(entry.report, '# テスト用分析\nソースに基づく説明。\n');
-    return complete(prepared.planFile, skill, false, dependencies);
+    return complete(prepared.planFile, skill);
   }
   finishAll() {
     const prepared = this.prepare('', true);
@@ -147,26 +141,6 @@ class Fixture {
     return prepared;
   }
 }
-
-test('cross-report learning index changes do not invalidate completed analyses', () => {
-  const f = new Fixture();
-  const prepared = f.finishAll();
-  writeFileSync(path.join(prepared.plan.destination, 'repository-analysis.md'), '# 全体分析\n');
-  complete(prepared.planFile, undefined, true);
-  const before = status(prepared.planFile);
-  const learningIndex = path.join(f.root, 'reports/index.md');
-  const stateBefore = readFileSync(prepared.plan.state_file, 'utf8');
-  for (const content of ['# 学んだ設計\n', '# 別のリポジトリの学びを追加\n']) {
-    writeFileSync(learningIndex, content);
-    assert.deepEqual(status(prepared.planFile), before);
-    assert.equal(readFileSync(prepared.plan.state_file, 'utf8'), stateBefore);
-  }
-  unlinkSync(learningIndex);
-  assert.deepEqual(status(prepared.planFile), before);
-  const resumed = f.prepare('', true);
-  assert.deepEqual(resumed.result.pending, []);
-  assert.equal(status(resumed.planFile).repository.status, 'done');
-});
 
 test('confirmation gate, missing report and completion count', () => {
   const f = new Fixture();
@@ -261,95 +235,6 @@ test('repository, tree, blob, slash branch and commit URLs', () => {
   assert.equal(f.prepare('/tree/main/skills').result.selected_skills, 3);
 });
 
-test('resume skips completed analysis and updates only changed skill', () => {
-  const f = new Fixture();
-  let prepared = f.prepare('', true);
-  f.finish(prepared, 'skills/review/SKILL.md');
-  prepared = f.prepare('', true);
-  assert.equal(prepared.result.pending.length, 2);
-  assert.ok(!prepared.result.pending.includes('skills/review/SKILL.md'));
-  for (const entry of prepared.plan.skills)
-    if (entry.status === 'pending') f.finish(prepared, entry.skill);
-  f.write('skills/testing/SKILL.md', '# Updated testing\n');
-  f.commit('Change testing only');
-  assert.deepEqual(f.prepare().result.pending, ['skills/testing/SKILL.md']);
-});
-
-test('shared file changes invalidate all skills', () => {
-  const f = new Fixture();
-  f.finishAll();
-  f.write('README.md', '# New shared instructions\n');
-  f.commit('Update shared README');
-  assert.equal(f.prepare().result.pending.length, 3);
-});
-
-test('deleted cross-skill dependencies invalidate their consumers', () => {
-  const f = new Fixture();
-  const prepared = f.prepare('', true);
-  const dependency = 'skills/testing/references/shared.md';
-  for (const entry of prepared.plan.skills)
-    f.finish(prepared, entry.skill, entry.skill === 'skills/review/SKILL.md' ? [dependency] : []);
-  unlinkSync(path.join(f.source, dependency));
-  f.commit('Remove referenced resource');
-  assert.deepEqual(f.prepare().result.pending, [
-    'skills/review/SKILL.md',
-    'skills/testing/SKILL.md',
-  ]);
-});
-
-test('GitHub index-only updates notify without invalidating completed research', () => {
-  const f = new Fixture();
-  f.finishAll();
-  f.index = { status: 'available', items: [{ number: 1, updated_at: '2026-10-19T00:00:00Z' }] };
-  const updated = f.prepare();
-  assert.deepEqual(updated.result.pending, []);
-  assert.equal(updated.result.discussion_updates.length, 3);
-  assert.match(updated.result.warning ?? '', /索引.*更新.*--refresh/);
-  assert.equal(f.prepare().result.discussion_updates.length, 3);
-  f.finishAll();
-  f.index = { status: 'unavailable', items: [], error: 'rate limited' };
-  const { result } = f.prepare();
-  assert.equal(result.index_status, 'unavailable');
-  assert.match(result.warning ?? '', /rate limited/);
-  assert.equal(result.pending.length, 3);
-});
-
-test('index-only updates preserve report bytes and refresh acknowledges new discussion', () => {
-  const f = new Fixture();
-  const original = f.finishAll();
-  const report = original.plan.skills[0]!.report;
-  const before = readFileSync(report, 'utf8');
-  const previous = readJson<State>(original.plan.state_file);
-  for (const entry of Object.values(previous.skills)) delete entry.index_status;
-  writeFileSync(original.plan.state_file, JSON.stringify(previous));
-  f.index = {
-    status: 'available',
-    items: [{ number: 999, title: 'Unrelated repository discussion' }],
-  };
-  const reused = f.prepare('', true);
-  assert.deepEqual(reused.result.pending, []);
-  assert.equal(readFileSync(report, 'utf8'), before);
-  const refreshed = f.prepare('', true, true);
-  assert.equal(refreshed.result.pending.length, 3);
-  for (const entry of refreshed.plan.skills) f.finish(refreshed, entry.skill);
-  assert.deepEqual(f.prepare().result.discussion_updates, []);
-});
-
-test('discussion update notices and forced acknowledgement follow the selected scope', () => {
-  const f = new Fixture();
-  f.finishAll();
-  f.index = { status: 'available', items: [{ number: 12 }] };
-  const selected = f.prepare('/tree/main/skills/review');
-  assert.deepEqual(selected.result.discussion_updates, ['skills/review/SKILL.md']);
-  assert.deepEqual(selected.result.pending, []);
-  const refreshed = f.prepare('/tree/main/skills/review', true, true);
-  f.finish(refreshed, 'skills/review/SKILL.md');
-  assert.deepEqual(f.prepare().result.discussion_updates, [
-    'skills/testing/SKILL.md',
-    'skills/writing/SKILL.md',
-  ]);
-});
-
 test('stale plans cannot approve or complete', () => {
   const f = new Fixture();
   const old = f.prepare('', true);
@@ -367,7 +252,7 @@ test('successful preparation prunes only superseded plans for the same repositor
   assert.ok(!existsSync(path.dirname(previous.planFile)));
   assert.ok(existsSync(current.planFile));
   assert.ok(existsSync(current.plan.github_index));
-  assert.deepEqual(current.result.pending, ['skills/testing/SKILL.md', 'skills/writing/SKILL.md']);
+  assert.equal(current.result.pending.length, 3);
   assert.doesNotThrow(() => f.finish(current, 'skills/testing/SKILL.md'));
   const other = prepareSnapshot(
     { url: 'https://github.com/Alice/Other', workspace: f.root },
@@ -539,22 +424,88 @@ test('status reports the selected current progress and validates repository comp
   assert.throws(() => status(prepared.planFile), /古いPLAN|PLANが見つかりません/);
 });
 
-test('repository completion stays pending after individual research is repeated', () => {
+test('every selected skill is researched again on re-prepare and repository completion resets', () => {
   const f = new Fixture();
   const initial = f.finishAll();
   const overview = path.join(initial.plan.destination, 'repository-analysis.md');
   writeFileSync(overview, '# Repository analysis\n');
   complete(initial.planFile, undefined, true);
-  const unchanged = f.prepare('', true);
-  assert.equal(status(unchanged.planFile).repository.status, 'done');
-  f.index = { status: 'available', items: [{ number: 8 }] };
-  const refreshed = f.prepare('', true);
-  for (const entry of refreshed.plan.skills) f.finish(refreshed, entry.skill);
-  assert.equal(status(refreshed.planFile).repository.status, 'pending');
-  complete(refreshed.planFile, undefined, true);
-  assert.equal(status(refreshed.planFile).repository.status, 'done');
-  f.finish(refreshed, 'skills/review/SKILL.md');
-  assert.equal(status(refreshed.planFile).repository.status, 'pending');
+  assert.equal(status(initial.planFile).repository.status, 'done');
+  const again = f.prepare('', true);
+  assert.equal(again.result.pending.length, 3);
+  assert.equal(status(again.planFile).repository.status, 'pending');
+  for (const entry of again.plan.skills) f.finish(again, entry.skill);
+  assert.equal(status(again.planFile).repository.status, 'pending');
+  complete(again.planFile, undefined, true);
+  assert.equal(status(again.planFile).repository.status, 'done');
+  f.finish(again, 'skills/review/SKILL.md');
+  assert.equal(status(again.planFile).repository.status, 'pending');
+});
+
+test('an older state format keeps report ownership for removed skills', () => {
+  const f = new Fixture();
+  const old = f.finishAll();
+  const report = required(old.plan.skills.find((e) => e.skill === 'skills/review/SKILL.md')).report;
+  const contents = readFileSync(report, 'utf8');
+  const legacy = readJson<State>(old.plan.state_file);
+  writeFileSync(
+    old.plan.state_file,
+    JSON.stringify({
+      ...legacy,
+      version: 2,
+      skills: Object.fromEntries(
+        Object.entries(legacy.skills).map(([skill, entry]) => [
+          skill,
+          { ...entry, dependencies: [], source_signature: 'x', index_hash: 'y' },
+        ]),
+      ),
+    }),
+  );
+  unlinkSync(path.join(f.source, 'skills/review/SKILL.md'));
+  f.write('.agents/skills/review/SKILL.md', '# Replacement\n');
+  f.commit('Replace review namespace after a state upgrade');
+  const current = f.prepare('', true);
+  const replacement = required(
+    current.plan.skills.find((e) => e.skill === '.agents/skills/review/SKILL.md'),
+  );
+  assert.notEqual(replacement.report.toLowerCase(), report.toLowerCase());
+  f.finish(current, '.agents/skills/review/SKILL.md');
+  assert.equal(readFileSync(report, 'utf8'), contents);
+  const state = readJson<State>(current.plan.state_file);
+  assert.equal(state.version, 3);
+  assert.deepEqual(state.removed, ['skills/review/SKILL.md']);
+  assert.equal(
+    required(state.skills['skills/review/SKILL.md']).report,
+    path.relative(current.plan.destination, report),
+  );
+});
+
+test('an unavailable GitHub index warns and a replaced state format starts fresh', () => {
+  const f = new Fixture();
+  f.index = { status: 'unavailable', items: [], error: 'gh missing' };
+  const offline = f.prepare();
+  assert.equal(offline.result.index_status, 'unavailable');
+  assert.match(offline.result.warning ?? '', /GitHub索引.*gh missing/);
+  f.index = { status: 'available', items: [] };
+  const done = f.finishAll();
+  const state = readJson<State>(done.plan.state_file);
+  assert.equal(state.version, 3);
+  for (const entry of Object.values(state.skills)) {
+    assert.equal(entry.status, 'done');
+    assert.equal(entry.analyzed_commit, done.plan.commit);
+    assert.deepEqual(Object.keys(entry).sort(), [
+      'analyzed_at',
+      'analyzed_commit',
+      'report',
+      'report_hash',
+      'status',
+    ]);
+  }
+  writeFileSync(done.plan.state_file, JSON.stringify({ ...state, version: 2 }));
+  const replaced = f.prepare('', true);
+  assert.equal(replaced.result.pending.length, 3);
+  assert.equal(readJson<State>(replaced.plan.state_file).version, 3);
+  assert.equal(readJson<State>(replaced.plan.state_file).active_plan, replaced.plan.id);
 });
 
 test('individual analysis preserves other reports and inventory', () => {
@@ -564,56 +515,12 @@ test('individual analysis preserves other reports and inventory', () => {
   const before = readFileSync(report, 'utf8');
   const prepared = f.prepare('/tree/main/skills/review');
   assert.equal(prepared.result.selected_skills, 1);
-  assert.deepEqual(prepared.result.pending, []);
+  assert.deepEqual(prepared.result.pending, ['skills/review/SKILL.md']);
   assert.equal(readFileSync(report, 'utf8'), before);
   assert.equal(prepared.plan.skills.length, 3);
-});
-
-test('unchanged unavailable indexes resume completed reports and still detect source changes', () => {
-  const f = new Fixture();
-  f.index = { status: 'unavailable', items: [], error: 'gh missing' };
-  const completed = f.finishAll();
-  const legacy = readJson<State>(completed.plan.state_file);
-  for (const entry of Object.values(legacy.skills)) delete entry.index_status;
-  writeFileSync(completed.plan.state_file, JSON.stringify(legacy));
-  f.index.error = 'authentication unavailable';
-  const resumed = f.prepare();
-  assert.deepEqual(resumed.result.pending, []);
-  assert.equal(resumed.result.index_status, 'unavailable');
-  assert.match(resumed.result.warning ?? '', /索引.*取得できない/);
-  f.write('skills/review/SKILL.md', '# Changed review\n');
-  f.commit('Change offline source');
-  assert.deepEqual(f.prepare().result.pending, ['skills/review/SKILL.md']);
-  assert.equal(f.prepare('', false, true).result.pending.length, 3);
-});
-
-test('restored GitHub index triggers research after offline completion', () => {
-  const f = new Fixture();
-  f.index = { status: 'unavailable', items: [] };
-  f.finishAll();
-  assert.deepEqual(f.prepare().result.pending, []);
-  f.index = { status: 'available', items: [] };
-  const result = f.prepare().result;
-  assert.equal(result.pending.length, 3);
-  assert.equal(result.warning, null);
-});
-
-test('individual forced refresh preserves completed skills outside the selection', () => {
-  const f = new Fixture();
-  f.finishAll();
-  const individual = f.prepare('/tree/main/skills/review', false, true);
-  assert.deepEqual(individual.result.pending, ['skills/review/SKILL.md']);
-  const state = readJson<State>(individual.plan.state_file);
+  const state = readJson<State>(prepared.plan.state_file);
   assert.equal(required(state.skills['skills/testing/SKILL.md']).status, 'done');
-  assert.equal(required(state.skills['skills/writing/SKILL.md']).status, 'done');
-  assert.deepEqual(f.prepare().result.pending, ['skills/review/SKILL.md']);
-});
-
-test('forced refresh survives interruption', () => {
-  const f = new Fixture();
-  f.finishAll();
-  f.prepare('', false, true);
-  assert.equal(f.prepare().result.pending.length, 3);
+  assert.equal(required(state.skills['skills/review/SKILL.md']).status, 'pending');
 });
 
 test('root skills and duplicate namespaces have distinct reports', () => {
@@ -663,7 +570,9 @@ test('replacement skills cannot overwrite removed skill reports', () => {
   );
   assert.notEqual(replacement.report.toLowerCase(), report.toLowerCase());
   assert.equal(readFileSync(report, 'utf8'), contents);
-  assert.deepEqual(f.prepare().result.pending, []);
+  const again = f.prepare();
+  assert.equal(again.result.pending.length, 3);
+  assert.deepEqual(readJson<State>(again.plan.state_file).removed, ['skills/review/SKILL.md']);
 });
 
 test('report files cannot collide with parent directories', () => {
@@ -672,13 +581,6 @@ test('report files cannot collide with parent directories', () => {
   f.write('skills/foo.md/bar/SKILL.md', '# Bar\n');
   f.commit('Add report and directory collision');
   assert.equal(f.finishAll().plan.skills.length, 5);
-});
-
-test('missing reports are not skipped', () => {
-  const f = new Fixture();
-  const old = f.finishAll();
-  unlinkSync(required(old.plan.skills.find((e) => e.skill === 'skills/review/SKILL.md')).report);
-  assert.deepEqual(f.prepare().result.pending, ['skills/review/SKILL.md']);
 });
 
 test('unsafe URLs and non-skill blobs are rejected', () => {
@@ -736,114 +638,13 @@ test('CLI help and invalid input exit codes', () => {
   }
 });
 
-test('fingerprints keep Rust-compatible map key order and string encoding', () => {
-  assert.equal(
-    canonicalJson({ z: '日本語', 10: 2, 2: 1, a: '\n' }),
-    '{"10":2,"2":1,"a":"\\n","z":"日本語"}',
-  );
-});
-
-test('fingerprints match checkpoints produced by the former Rust binary', () => {
-  const fixture = readJson<{
-    files: Files;
-    history: string;
-    'source_signature': string;
-    'report_text': string;
-    'report_hash': string;
-    index: GithubIndex;
-    'index_hash': string;
-  }>(fileURLToPath(new URL('./fixtures/checkpoint-format-v2.json', import.meta.url)));
-  assert.equal(
-    digest({ files: fixture.files, history: fixture.history }),
-    fixture.source_signature,
-  );
-  assert.equal(digest(fixture.report_text), fixture.report_hash);
-  assert.equal(digest(fixture.index), fixture.index_hash);
-});
-
-test('missing dependencies and blank reports cannot be completed', () => {
+test('blank reports cannot be completed', () => {
   const f = new Fixture();
   const prepared = f.prepare('', true);
-  assert.throws(
-    () => f.finish(prepared, 'skills/review/SKILL.md', ['not-in-commit.md']),
-    /存在しない/,
-  );
   const entry = required(prepared.plan.skills.find((e) => e.skill === 'skills/review/SKILL.md'));
+  mkdirSync(path.dirname(entry.report), { recursive: true });
   writeFileSync(entry.report, '\n');
   assert.throws(() => complete(prepared.planFile, entry.skill), /空です/);
-});
-
-test.each([
-  {
-    kind: 'pathspec-magic skill',
-    target: ':(exclude)skills/review/SKILL.md',
-    unrelated: 'skills/review/SKILL.md',
-    watched: ':(exclude)skills/review/SKILL.md',
-    extraSkill: 'skills/testing/SKILL.md',
-    relevantPending: [':(exclude)skills/review/SKILL.md'],
-    unrelatedPending: ['skills/review/SKILL.md'],
-  },
-  {
-    kind: 'skill',
-    target: 'skills/[review]/SKILL.md',
-    unrelated: 'skills/r/SKILL.md',
-    watched: 'skills/[review]/SKILL.md',
-    extraSkill: 'skills/r/SKILL.md',
-    relevantPending: ['skills/[review]/SKILL.md'],
-    unrelatedPending: ['skills/r/SKILL.md'],
-  },
-  {
-    kind: 'shared file',
-    target: '[docs]/guide.md',
-    unrelated: 'd/guide.md',
-    watched: 'skills/review/SKILL.md',
-    extraSkill: 'd/SKILL.md',
-    relevantPending: [
-      'd/SKILL.md',
-      'skills/review/SKILL.md',
-      'skills/testing/SKILL.md',
-      'skills/writing/SKILL.md',
-    ],
-    unrelatedPending: ['d/SKILL.md'],
-  },
-  {
-    kind: 'dependency',
-    target: 'skills/testing/references/[guide].md',
-    unrelated: 'skills/testing/references/g.md',
-    watched: 'skills/review/SKILL.md',
-    extraSkill: 'skills/testing/SKILL.md',
-    relevantPending: ['skills/review/SKILL.md', 'skills/testing/SKILL.md'],
-    unrelatedPending: ['skills/testing/SKILL.md'],
-  },
-])('history treats $kind paths literally when blobs are restored', (scenario) => {
-  const f = new Fixture();
-  f.write(scenario.extraSkill, '# Extra skill\n');
-  f.write(scenario.target, '# Original\n');
-  f.write(scenario.unrelated, '# Original\n');
-  f.commit('Add literal and pathspec-matching paths');
-  const finish = () => {
-    const prepared = f.prepare('', true);
-    for (const entry of prepared.plan.skills) {
-      const dependencies =
-        scenario.kind === 'dependency' && entry.skill === scenario.watched ? [scenario.target] : [];
-      f.finish(prepared, entry.skill, dependencies);
-    }
-  };
-  const changeAndRestore = (file: string) => {
-    const tree = f.git('rev-parse', 'HEAD^{tree}');
-    f.write(file, '# Temporary change\n');
-    f.commit('Change content without retaining the new blob');
-    f.write(file, '# Original\n');
-    f.commit('Restore the original blob');
-    assert.equal(f.git('rev-parse', 'HEAD^{tree}'), tree);
-  };
-  finish();
-  assert.deepEqual(f.prepare().result.pending, []);
-  changeAndRestore(scenario.target);
-  assert.deepEqual(f.prepare().result.pending.sort(), [...scenario.relevantPending].sort());
-  finish();
-  changeAndRestore(scenario.unrelated);
-  assert.deepEqual(f.prepare().result.pending.sort(), [...scenario.unrelatedPending].sort());
 });
 
 test('full commit URL resolution avoids absent named-ref probes', () => {
@@ -987,9 +788,6 @@ test('the default plan keeps Markdown output and reports absent HTML without cha
   assert.equal(after.done, before.done);
   assert.equal(after.repository.status, 'done');
   assert.equal(readFileSync(prepared.plan.state_file, 'utf8'), stateBefore);
-  const resumed = f.prepare('', true);
-  assert.deepEqual(resumed.result.pending, []);
-  assert.equal(status(resumed.planFile).repository.status, 'done');
 });
 
 test('HTML format is recorded in the plan and checked beside each report', () => {
@@ -1053,7 +851,7 @@ test('the distributed CLI accepts --format html and rejects unknown formats and 
   assert.equal(invoke('check-html', prepared.planFile).status, 1);
   assert.equal(invoke('check-html', prepared.planFile, '--skill', 'x', '--repository').status, 1);
   assert.equal(
-    invoke('check-html', prepared.planFile, '--skill', entry.skill, '--dependency', 'x').status,
+    invoke('check-html', prepared.planFile, '--skill', entry.skill, '--extra', 'x').status,
     1,
   );
   mkdirSync(path.dirname(entry.html), { recursive: true });

@@ -54,11 +54,9 @@ const trustedFiles = [
   'references/research.md',
   'references/report-format.md',
   'references/writing.md',
-  'references/learning-index.md',
   'references/html-report.md',
   'assets/templates/skill-analysis.md',
   'assets/templates/repository-analysis.md',
-  'assets/templates/learning-index.md',
   'assets/templates/skill-analysis.html',
   'assets/templates/repository-analysis.html',
 ];
@@ -398,7 +396,6 @@ function serveProfile(output: string): void {
       const paths = [
         ...selected.map((entry) => String(entry.report)),
         path.join(destination, 'repository-analysis.md'),
-        path.join(workspace, 'reports/index.md'),
       ];
       if (current.format === 'html')
         paths.push(
@@ -646,7 +643,7 @@ async function evaluate(profileName: string): Promise<void> {
   ];
   for (const [key, value] of Object.entries(config))
     args.push('-c', `${key}=${JSON.stringify(value)}`);
-  const prompt = `Use the skill installed at /tool/SKILL.md to analyze ${profile.url}. Prepare and scope approval are already complete; continue from /plan.json and complete the Japanese analysis using the research tools (read_file, write_file, run_command, path_info). The source files are readable at /cache/source/<path> and through read-only git on /cache/repo.git; GitHub issues and pull requests of this repository are readable with "gh api". The normal output paths, including the shared learning index at /workspace/reports/index.md, were approved. No other reports exist.${profile.format === 'html' ? '\n利用者の指定: HTML版でも出力してください。PLANの format は html です。' : ''}`;
+  const prompt = `Use the skill installed at /tool/SKILL.md to analyze ${profile.url}. Prepare and scope approval are already complete; continue from /plan.json and complete the Japanese analysis using the research tools (read_file, write_file, run_command, path_info). The source files are readable at /cache/source/<path> and through read-only git on /cache/repo.git; GitHub issues and pull requests of this repository are readable with "gh api". The normal output paths were approved. No other reports exist.${profile.format === 'html' ? '\n利用者の指定: HTML版でも出力してください。PLANの format は html です。' : ''}`;
   writeFileSync(path.join(output, 'prompt.txt'), prompt);
   console.log(`Real-model evaluation ${profileName}: ${output}`);
   const child = spawn('codex', args, { stdio: ['pipe', 'pipe', 'pipe'] });

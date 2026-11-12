@@ -4,13 +4,12 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
-  readFileSync,
   realpathSync,
   rmdirSync,
   unlinkSync,
 } from 'node:fs';
 import path from 'node:path';
-import { digest, sorted, createSourceSigner } from './fingerprint.js';
+import { sorted } from './hash.js';
 import { htmlPath } from './html.js';
 import {
   acquire,
@@ -75,60 +74,26 @@ function prepareSnapshotUnlocked(
   const source = materializeSource(root, target, cache, commit, files);
   const destination = inside(root, `reports/${target.owner}/${target.repo}`);
   const stateFile = inside(destination, '.state.json');
-  const state: State = existsSync(stateFile)
-    ? readJson<State>(stateFile)
-    : {
-        version: VERSION,
-        active_plan: '',
-        skills: {},
-        inventory: [],
-        removed: [],
-        repository: null,
-      };
-  if (state.version !== VERSION) throw new Error('状態ファイルのバージョンが異なります');
-  const indexHash = digest({ status: index.status, items: index.items });
-  const unavailableIndexHash = digest({ status: 'unavailable', items: [] });
-  const discussionUpdates: string[] = [];
+  const existing = existsSync(stateFile) ? readJson<State>(stateFile) : null;
+  const state: State = existing && existing.version === VERSION ? existing : upgradeState(existing);
   const mappings = reportPaths(
     allSkills,
     Object.fromEntries(Object.entries(state.skills).map(([skill, entry]) => [skill, entry.report])),
   );
   const entries: Entry[] = [];
-  const signSource = createSourceSigner(cache, commit, files, allSkills);
   const selectedSkills = new Set(selected);
   for (const skill of allSkills) {
     const old: SkillState = state.skills[skill] ?? {
       status: 'pending',
       report: '',
-      dependencies: [],
-      source_signature: '',
-      index_hash: '',
       report_hash: '',
       analyzed_commit: null,
       analyzed_at: null,
     };
     const report = mappings[skill]!;
-    const signature = signSource(skill, old.dependencies);
     const reportPath = inside(destination, report);
-    let reportHash: string | undefined;
-    if (existsSync(reportPath)) reportHash = digest(readFileSync(reportPath, 'utf8'));
-    const previousIndexStatus =
-      old.index_status ?? (old.index_hash === unavailableIndexHash ? 'unavailable' : 'available');
-    const unchanged =
-      !(options.refresh && selectedSkills.has(skill)) &&
-      old.status === 'done' &&
-      old.source_signature === signature &&
-      previousIndexStatus === index.status &&
-      old.report === report &&
-      old.report_hash === reportHash;
-    if (
-      unchanged &&
-      index.status === 'available' &&
-      old.index_hash !== indexHash &&
-      selectedSkills.has(skill)
-    )
-      discussionUpdates.push(skill);
-    old.status = unchanged ? 'done' : 'pending';
+    // Selected skills are always researched again; others keep their records.
+    if (selectedSkills.has(skill) || old.report !== report) old.status = 'pending';
     old.report = report;
     state.skills[skill] = old;
     entries.push({
@@ -162,8 +127,6 @@ function prepareSnapshotUnlocked(
     github_index: indexFile,
     source: source.directory,
     source_index: source.index,
-    index_status: index.status,
-    index_hash: indexHash,
     approved: !!options.noConfirm,
     confirmation: options.noConfirm ? 'skipped-by-user' : 'required',
     format: options.format ?? 'markdown',
@@ -192,20 +155,47 @@ function prepareSnapshotUnlocked(
     source_index: source.index,
     source_files: source.expanded,
     source_skipped: source.skipped,
-    discussion_updates: discussionUpdates,
     warning:
       [
         index.status === 'unavailable'
-          ? `GitHub索引を取得できないため、PR・Issueの更新は未確認です。${index.error ? ` ${index.error}` : ''}`
+          ? `GitHub索引を取得できないため、PR・Issueは未確認です。${index.error ? ` ${index.error}` : ''}`
           : null,
         ...cleanupWarnings,
-        discussionUpdates.length
-          ? 'PR・Issue索引に更新があります。完了済み本文は保持し、議論の更新は未確認です。再確認する場合は--refreshを指定してください。'
-          : null,
       ]
         .filter(Boolean)
         .join(' ') || null,
     destination,
+  };
+}
+
+// An older state format keeps which report each skill owns, so reports of removed skills
+// stay protected from replacement skills. Completion metadata is dropped because every
+// selected report is rewritten anyway.
+function upgradeState(previous: unknown): State {
+  const skills: Record<string, SkillState> = {};
+  const entries =
+    previous && typeof previous === 'object' && 'skills' in previous ? previous.skills : null;
+  if (entries && typeof entries === 'object')
+    for (const [skill, entry] of Object.entries(entries as Record<string, unknown>)) {
+      const report =
+        entry && typeof entry === 'object' && 'report' in entry && typeof entry.report === 'string'
+          ? entry.report
+          : '';
+      skills[skill] = {
+        status: 'pending',
+        report,
+        report_hash: '',
+        analyzed_commit: null,
+        analyzed_at: null,
+      };
+    }
+  return {
+    version: VERSION,
+    active_plan: '',
+    skills,
+    inventory: [],
+    removed: [],
+    repository: null,
   };
 }
 

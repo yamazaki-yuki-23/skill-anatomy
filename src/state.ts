@@ -1,9 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { digest, sorted, sourceSignature } from './fingerprint.js';
+import { digest } from './hash.js';
 import { htmlPath, inspectHtml } from './html.js';
 import { inside, readJson, writeJson, withStateLock } from './storage.js';
 import type { HtmlProgress, Plan, Progress, State } from './types.js';
-export const VERSION = 2;
+export const VERSION = 3;
 export const REPORT_BYTES_GUIDE = 20000;
 export function timestamp(): string {
   return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
@@ -125,12 +125,7 @@ function ensureReport(filename: string): string {
   if (!text.trim()) throw new Error(`分析ファイルが空です: ${filename}`);
   return text;
 }
-export function complete(
-  planFile: string,
-  skill?: string,
-  repository = false,
-  dependencies: string[] = [],
-): unknown {
+export function complete(planFile: string, skill?: string, repository = false): unknown {
   return withActivePlan(planFile, ({ plan, state }) => {
     if (!plan.approved)
       throw new Error('分析方針が未承認です。ユーザーのOK後にapproveを実行してください');
@@ -152,28 +147,14 @@ export function complete(
       if (!skill) throw new Error('--skillか--repositoryを指定してください');
       if (!selected.some((e) => e.skill === skill))
         throw new Error('このPLANの分析対象ではないスキルです');
-      const uniqueDependencies = sorted(new Set(dependencies));
-      if (uniqueDependencies.some((p) => !Object.hasOwn(plan.files, p)))
-        throw new Error('コミットに存在しない依存ファイルです');
       const current = state.skills[skill];
       if (!current) throw new Error('状態ファイルに対象スキルがありません');
       report = inside(plan.destination, current.report);
       const text = ensureReport(report);
       Object.assign(current, {
-        source_signature: sourceSignature(
-          plan.cache,
-          plan.commit,
-          plan.files,
-          skill,
-          state.inventory,
-          uniqueDependencies,
-        ),
         status: 'done',
         analyzed_commit: plan.commit,
         analyzed_at: timestamp(),
-        index_hash: plan.index_hash,
-        index_status: plan.index_status,
-        dependencies: uniqueDependencies,
         report_hash: digest(text),
       });
       state.repository = null;

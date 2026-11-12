@@ -1,5 +1,5 @@
 import path from "node:path";
-import { digest, sorted } from "./fingerprint.js";
+import { digest, sorted } from "./hash.js";
 import { htmlPath } from "./html.js";
 function isSkill(name) {
   return name === "SKILL.md" || name.endsWith("/SKILL.md");
