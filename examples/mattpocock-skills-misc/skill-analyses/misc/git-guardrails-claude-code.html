@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>git-guardrails-claude-code の分析</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #fffdf7;
+  --grid: #d9d4c4;
+  --surface: #ffffff;
+  --ink: #2b2d42;
+  --text: #2b2d42;
+  --muted: #6b6f80;
+  --line: #e6e2d6;
+  --code-bg: #f4f1e8;
+  --yellow: #ffe066;
+  --pink: #ffa3bf;
+  --blue: #2457f5;
+  --mint: #8fe3d2;
+  --link: #1d4ed8;
+  --shadow-ink: #2b2d42;
+  --accent: #2457f5;
+  --accent-soft: #dfe7ff;
+  --surface-2: #f4f1e8;
+  --content: 44rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1d26;
+    --grid: #343647;
+    --surface: #262837;
+    --ink: #eceef5;
+    --text: #e6e8f0;
+    --muted: #a3a8ba;
+    --line: #3d4052;
+    --code-bg: #2f3243;
+    --link: #8fb6ff;
+    --shadow-ink: #0f1016;
+    --accent: #8fb6ff;
+    --accent-soft: #2d3a66;
+    --surface-2: #2f3243;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 1.5rem; }
+body {
+  margin: 0;
+  color: var(--text);
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--grid) 1.2px, transparent 1.3px);
+  background-size: 22px 22px;
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "BIZ UDPGothic", Meiryo, "Noto Sans JP", sans-serif;
+  font-size: 1rem;
+  line-height: 1.9;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4, .eyebrow, .toc-title {
+  font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", Meiryo, "Noto Sans JP", sans-serif;
+  font-weight: 800;
+}
+a { color: var(--link); text-decoration-thickness: 2px; text-underline-offset: 0.2em; }
+code, pre, kbd { font-family: ui-monospace, "SFMono-Regular", Menlo, "BIZ UDGothic", Consolas, "Noto Sans Mono CJK JP", monospace; font-size: 0.92em; }
+code { background: var(--code-bg); padding: 0.1em 0.4em; border-radius: 6px; overflow-wrap: anywhere; }
+pre {
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+  box-shadow: 4px 4px 0 var(--shadow-ink);
+}
+pre code { background: none; padding: 0; font-size: 0.88rem; }
+.page { max-width: calc(var(--content) + 20rem); margin: 0 auto; padding: clamp(1rem, 3vw, 2.5rem) 16px 4rem; }
+.hero {
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 18px;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  margin-bottom: 2rem;
+  box-shadow: 8px 8px 0 var(--yellow);
+}
+.eyebrow {
+  display: table;
+  margin: 0 0 1rem;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 0.95rem;
+  padding: 0.15em 0.8em;
+  border-radius: 999px;
+  transform: none;
+}
+.hero h1 {
+  display: inline;
+  margin: 0;
+  font-size: clamp(1.9rem, 5vw, 3rem);
+  line-height: 1.3;
+  background: linear-gradient(transparent 58%, var(--yellow) 58%);
+  padding: 0 0.1em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+@media (prefers-color-scheme: dark) { .hero h1 { color: #fff; background: linear-gradient(transparent 58%, #8a6d00 58%); } }
+.lead { margin: 1.3rem 0 1.6rem; font-size: 1.08rem; max-width: 36rem; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0.8rem; margin: 0; }
+.facts div { border: 2px dashed var(--line); border-radius: 12px; padding: 0.6rem 0.9rem; background: var(--surface); }
+.facts dt { font-size: 0.78rem; color: var(--muted); font-weight: 700; }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.layout { display: grid; grid-template-columns: 1fr; gap: 1.6rem; align-items: start; }
+.toc {
+  background: #fff4c2;
+  color: #2b2d42;
+  padding: 1rem 1.1rem 1.2rem;
+  border-radius: 4px;
+  box-shadow: 3px 5px 10px rgba(43, 45, 66, 0.18);
+  transform: none;
+}
+.toc-title { margin: 0 0 0.4rem; font-size: 0.9rem; }
+.toc ol { margin: 0; padding-left: 1.3rem; line-height: 1.7; }
+.toc ol ol { list-style: none; padding-left: 0.8rem; margin: 0.1rem 0 0.4rem; font-size: 0.9rem; line-height: 1.55; }
+.toc ol ol li::before { content: "・"; color: #6b6f80; }
+.toc a { color: #2b2d42; text-decoration: none; border-bottom: 2px solid transparent; }
+.toc a:hover { border-bottom-color: #2b2d42; }
+main { min-width: 0; }
+section {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: clamp(1.2rem, 3vw, 2.2rem);
+  margin-bottom: 1.8rem;
+}
+h2 {
+  display: table;
+  margin: -2.4rem 0 1.2rem -0.4rem;
+  font-size: 1.3rem;
+  line-height: 1.3;
+  color: #2b2d42;
+  background: var(--sticker, var(--pink));
+  padding: 0.3em 0.9em;
+  border-radius: 8px;
+  transform: none;
+  box-shadow: 0 1px 3px rgba(43, 45, 66, 0.12);
+}
+h3 {
+  display: table;
+  margin: 1.8rem 0 0.6rem;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  background: linear-gradient(transparent 60%, var(--pink) 60%);
+  padding: 0 0.15em;
+}
+@media (prefers-color-scheme: dark) { h3 { background: linear-gradient(transparent 60%, #7a2d47 60%); } }
+h4 { margin: 1.4rem 0 0.4rem; font-size: 1rem; }
+p, ul, ol { margin: 0 0 1rem; }
+li { margin-bottom: 0.3rem; }
+p, li, td, dd, a { overflow-wrap: anywhere; }
+blockquote { margin: 0 0 1rem; padding: 0.3rem 0 0.3rem 1rem; border-left: 4px solid var(--line); color: var(--muted); }
+blockquote > :last-child { margin-bottom: 0; }
+table { width: 100%; border-collapse: collapse; margin: 0 0 1.2rem; font-size: 0.95rem; }
+.table-wrap { overflow-x: auto; margin: 0 0 1.2rem; }
+.table-wrap table { margin: 0; }
+th, td { padding: 0.6rem 0.8rem; text-align: left; vertical-align: top; border: 2px solid var(--ink); }
+thead th { background: var(--yellow); color: #2b2d42; font-weight: 800; }
+tbody th { white-space: nowrap; font-weight: 700; }
+td:first-child, th:first-child { min-width: 7rem; }
+.status { display: inline-block; padding: 0.05em 0.7em; border-radius: 999px; border: 2px solid var(--ink); font-size: 0.85em; font-weight: 700; }
+.note { background: var(--surface); border: 2px dashed var(--pink); border-radius: 12px; padding: 0.9rem 1.1rem; margin: 1.2rem 0; }
+.note > :last-child { margin-bottom: 0; }
+.figure { margin: 1.4rem 0; }
+.figure svg { display: block; max-width: 100%; height: auto; }
+.figure figcaption { margin-top: 0.5rem; font-size: 0.9rem; color: var(--muted); }
+.source { font-size: 0.88rem; color: var(--muted); }
+.sources-list { padding-left: 1.3rem; font-size: 0.95rem; }
+footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: center; }
+@media (min-width: 64rem) {
+  .layout { grid-template-columns: 15rem minmax(0, 1fr); }
+  .toc { position: sticky; top: 1.5rem; max-height: calc(100vh - 3rem); overflow-y: auto; }
+}
+@media print {
+  body { background: #fff; color: #000; }
+  .hero, section, pre { box-shadow: none; border-color: #444; }
+  .toc { display: none; }
+  .eyebrow, h2 { transform: none; box-shadow: none; }
+  a { color: inherit; }
+}
+#overview { --sticker: var(--pink); }
+#flow { --sticker: var(--blue); }
+#flow h2 { color: #fff; }
+#history { --sticker: var(--mint); }
+#design { --sticker: var(--ink); }
+#design h2 { color: var(--surface); }
+#sources { --sticker: var(--surface); }
+#sources h2 { color: var(--ink); border: 1px solid var(--line); }
+
+.report-details { margin: 1rem 0; border: 1px solid var(--line); border-radius: 8px; padding: 0.7rem 1rem; }
+.report-details summary { cursor: pointer; color: var(--link); font-weight: 600; }
+.report-details[open] summary { margin-bottom: 0.8rem; }
+.report-details summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+<header class="hero">
+  <p class="eyebrow">Skill anatomy</p>
+  <h1>git-guardrails-claude-code の分析</h1>
+  <p class="lead">git-guardrails-claude-code は、Claude Code が Bash で Git コマンドを実行する直前に、特定の文字列を含む操作を止めるフックを設置するスキルです。危険な操作を会話上の注意だけに委ねず、実行前の補助スクリプトで判定する構成です。ただし、ここで確認できる実装はコマンド文字列の照合であり、Git 操作全般の安全を保証するものではありません。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/git-guardrails-claude-code/SKILL.md#L3-L18">役割と遮断対象</a></p>
+  <dl class="facts">
+    <div><dt>元URL</dt><dd><a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/git-guardrails-claude-code/SKILL.md">mattpocock/skills/skills/misc/git-guardrails-claude-code</a></dd></div>
+    <div><dt>分析コミット</dt><dd><code>4ae2317ddb22</code></dd></div>
+    <div><dt>調査日</dt><dd>2026-11-13</dd></div>
+  </dl>
+</header>
+<div class="layout">
+<nav class="toc" aria-label="目次">
+  <p class="toc-title">目次</p>
+  <ol>
+<li><a href="#overview">概要と使い方</a></li>
+<li><a href="#flow">仕組みと処理の流れ</a></li>
+<li><a href="#history">作成・変更の経緯</a></li>
+<li><a href="#design">設計判断</a>
+<ol>
+<li><a href="#design-1">設置範囲を決めてから設定を変更する</a></li>
+<li><a href="#design-2">操作の意味ではなく文字列を判定する</a></li>
+</ol>
+</li>
+<li><a href="#sources">調査範囲と出典</a></li>
+  </ol>
+</nav>
+<main>
+<section id="overview">
+<h2>概要と使い方</h2>
+<p>git-guardrails-claude-code は、Claude Code が Bash で Git コマンドを実行する直前に、特定の文字列を含む操作を止めるフックを設置するスキルです。危険な操作を会話上の注意だけに委ねず、実行前の補助スクリプトで判定する構成です。ただし、ここで確認できる実装はコマンド文字列の照合であり、Git 操作全般の安全を保証するものではありません。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/git-guardrails-claude-code/SKILL.md#L3-L18">役割と遮断対象</a></p>
+<p>入力は、プロジェクト単位か全プロジェクト共通かという設置範囲と、遮断パターンの追加・削除の希望です。出力は、選んだ範囲の <code>.claude/hooks/block-dangerous-git.sh</code> と <code>settings.json</code> の設定です。Claude Code の <code>PreToolUse</code> はツールの使用直前に呼ぶ仕組みで、この設定では <code>Bash</code> を対象にします。スクリプトは Bash、JSON 抽出用の jq、文字列照合用の grep を使います。依存の実体はコードから確認でき、SKILL.md に jq の導入工程はありません。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/git-guardrails-claude-code/SKILL.md#L22-L81">設置手順</a>・<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/git-guardrails-claude-code/scripts/block-dangerous-git.sh#L1-L25">補助コード</a></p>
+</section>
+<section id="flow">
+<h2>仕組みと処理の流れ</h2>
+<p>本文にある検証入力 <code>tool_input.command = &quot;git push origin main&quot;</code> を追います。これはフックに渡す JSON の例です。今回この入力を実行した結果ではなく、記述された期待値とコードの対応を説明します。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/git-guardrails-claude-code/SKILL.md#L87-L95">検証例</a></p>
+<ol>
+<li>エージェントは、設置先をプロジェクト内かホームディレクトリ配下か利用者に尋ねます。決まった場所へ同梱スクリプトをコピーし、実行権限を付けます。</li>
+<li>選んだ設定ファイルの <code>hooks.PreToolUse</code> に Bash 用の呼び出しを加えます。既存ファイルがある場合は配列へ統合し、他の設定を上書きしません。</li>
+<li>利用者に遮断一覧の変更希望を尋ね、必要ならコピー先のスクリプトを編集します。</li>
+<li>フックは標準入力全体を読み、jq で <code>.tool_input.command</code> を取り出します。例の文字列は一覧の <code>git push</code> に一致します。</li>
+<li>一致すると、該当コマンドとパターンを含む <code>BLOCKED</code> メッセージを標準エラーへ出し、終了コード2で終了します。一致しない場合の終点は終了コード0です。</li>
+</ol>
+<p>設置の判断と既存設定の統合はエージェントの責務で、毎回の文字列判定はコピーされたコードの責務です。コードは受け取ったコマンドを自分で実行せず、grep の拡張正規表現で照合します。したがって検証例も実際に push する手順ではなく、JSON を渡して応答を確かめる作りです。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/git-guardrails-claude-code/SKILL.md#L81-L95">設定・調整・検証</a>・<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/git-guardrails-claude-code/scripts/block-dangerous-git.sh#L3-L25">照合処理</a></p>
+<p>本文の合格条件は「終了コード2」と「標準エラーの BLOCKED 表示」の組です。固定コミットには、このスキルの独立したテストスイートや評価用入力集はありません。この1例から他の綴りや異常な JSON の扱いまで検証済みとは読めません。</p>
+</section>
+<section id="history">
+<h2>作成・変更の経緯</h2>
+<p>2026年2月10日の<a href="https://github.com/mattpocock/skills/commit/30e0fdc263826f6db7b84362167a166d69d3041c">追加コミット</a>では、旧名 <code>setup-git-guardrails</code> の本文と補助スクリプトが追加されています。同日の<a href="https://github.com/mattpocock/skills/commit/b81729c6adec4fe7727da92020a5cb5358b2edd6">変更</a>は現在名への変更で、スクリプトの内容は同一です。名称変更から判定方式の変化を読み取ることはできません。</p>
+<p>実質的に異なる案として、<a href="https://github.com/mattpocock/skills/pull/27">PR #27</a> は、常時遮断とリポジトリ別の書き込み許可を2つのフックに分け、GitHub CLI も扱う案を提示しました。しかし PR は未マージで閉じられ、固定コミットは単一スクリプトのままです。提案者のテスト件数も、この固定コミットの評価結果には含めません。作者がこの案を採用しなかった技術的な理由は、取得した本文・コメント・レビューからは確認できませんでした。</p>
+<p>7月1日の<a href="https://github.com/mattpocock/skills/commit/7efc3d2a3899c141f4d64e11be2227e0049db626">非推奨配布枠への整理</a>を経て、固定コミットでは misc 全体が保守対象外です。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/.out-of-scope/frozen-misc-skills.md#L1-L15">方針文書</a>は、作者が日常的に使わず変更の妥当性を判断できないことと、利用頻度に対する保守コストを理由として説明しています。これは最初にフック方式を選んだ理由とは別の、現在の保守方針です。</p>
+</section>
+<section id="design">
+<h2>設計判断</h2>
+<h3 id="design-1">設置範囲を決めてから設定を変更する</h3>
+<p>どのプロジェクトに制約を及ぼすかが決まらなければ、設定ファイルの場所も決まりません。確認できる選択肢はプロジェクト単位と全プロジェクト共通の2つです。スキルは利用者の選択を先に求め、その後にコピーと設定追加へ進みます。採用する判断基準は適用範囲で、危険度によってスキル側が設置先を決める構成ではありません。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/git-guardrails-claude-code/SKILL.md#L22-L35">範囲確認</a></p>
+<p>既存の <code>hooks.PreToolUse</code> 配列への統合という指示は、他のフックや設定を残したまま制約を追加する動作を定めています。調整の対象も同梱元ではなくコピー先です。これにより、設置先の利用者が遮断内容を決める形になります。これらは指示から読み取れる役割分担であり、作者が比較検討した全候補の記録ではありません。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/git-guardrails-claude-code/SKILL.md#L81-L85">既存設定と調整</a></p>
+<h3 id="design-2">操作の意味ではなく文字列を判定する</h3>
+<p>実装上の問いは「何をもって遮断対象とするか」です。採用されているのは固定パターンとコマンド全文の一致で、リポジトリの所有者やブランチの状態は判定材料にありません。通常の push も force push も <code>git push</code> で止まります。一方、<code>push --force</code> や <code>reset --hard</code> という git を含まないパターンも併記されています。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/git-guardrails-claude-code/scripts/block-dangerous-git.sh#L6-L16">パターン一覧</a></p>
+<p>この条件の具体的な意味は、<a href="https://github.com/mattpocock/skills/issues/301">Issue #301</a>の <code>git -C /any/repo push</code> という報告で追えます。文字の間にオプションが入ると <code>git push</code> とは一致しません。ただし同じ報告に挙がる全例が同じ理由で通過するとは限らず、<code>reset --hard</code> は独立パターンにも一致します。ここでは報告者の主張とコードの条件を区別します。判定条件の説明であって、今回の再現実行ではありません。</p>
+<p><a href="https://github.com/mattpocock/skills/issues/898">Issue #898</a>は jq 不在時にも言及しています。固定コードは抽出の終了状態を検査せず、一致がなければ0で終わります。作者アカウントの<a href="https://github.com/mattpocock/skills/issues/898#issuecomment-6034220111">回答</a>は「AIによるトリアージ生成」と明示され、保守を行わず、安全保証として依存しないよう説明しています。提案された構文解析や失敗時遮断は、採用済みの仕様として扱えません。元の文字列方式を選んだ当時の判断基準や、組み込み deny ルールとの比較理由も未確認です。</p>
+</section>
+<section id="sources">
+<h2>調査範囲と出典</h2>
+<div class="table-wrap">
+<table>
+<thead><tr><th>項目</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td>元URL</td><td><a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/git-guardrails-claude-code/SKILL.md">git-guardrails-claude-code</a></td></tr>
+<tr><td>分析コミット</td><td><code>4ae2317ddb22b046e26455e4f9c9b3aaaf62212d</code></td></tr>
+<tr><td>調査日</td><td>2026-11-13</td></tr>
+<tr><td>実行検証</td><td>なし</td></tr>
+</tbody>
+</table>
+</div>
+<details class="report-details">
+<summary>詳しい調査記録を見る</summary>
+<div class="table-wrap">
+<table>
+<thead><tr><th>項目</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td>調査範囲</td><td>本文、補助スクリプト、agents/openai.yaml、misc/README、保守方針、plugin.json、link-skills.sh、package.json、固定ツリー一覧、移動前を含む本文履歴。Issue #301・#465・#898、PR #27・#1025 と取得できる関連コメント・レビュー・変更ファイル。索引全体を関連語で確認しました。</td></tr>
+<tr><td>未確認の範囲</td><td>初期方式の採用動機、組み込み権限との比較理由。外部フォークの修正版は未取得。固定ツリーで専用評価・共有評価への参照は見つからず、PR記載のテストは未採用案の情報です。</td></tr>
+</tbody>
+</table>
+</div>
+<p>表示用メタデータは<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/git-guardrails-claude-code/agents/openai.yaml#L1-L3">名前と短い説明</a>のみです。<a href="https://github.com/mattpocock/skills/issues/465#issuecomment-6016340857">Issue #465 の回答</a>も、比較ドキュメントを追加しない現在の保守方針を示しています。</p>
+</details>
+</section>
+</main>
+</div>
+<footer>Skill anatomy が生成した分析のHTML版。本文は同じフォルダのMarkdown版から補助CLIが生成したもので、完了記録はMarkdown版が持つ。</footer>
+</div>
+</body>
+</html>

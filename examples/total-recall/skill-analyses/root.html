@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>total-recall の分析</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #fffdf7;
+  --grid: #d9d4c4;
+  --surface: #ffffff;
+  --ink: #2b2d42;
+  --text: #2b2d42;
+  --muted: #6b6f80;
+  --line: #e6e2d6;
+  --code-bg: #f4f1e8;
+  --yellow: #ffe066;
+  --pink: #ffa3bf;
+  --blue: #2457f5;
+  --mint: #8fe3d2;
+  --link: #1d4ed8;
+  --shadow-ink: #2b2d42;
+  --accent: #2457f5;
+  --accent-soft: #dfe7ff;
+  --surface-2: #f4f1e8;
+  --content: 44rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1d26;
+    --grid: #343647;
+    --surface: #262837;
+    --ink: #eceef5;
+    --text: #e6e8f0;
+    --muted: #a3a8ba;
+    --line: #3d4052;
+    --code-bg: #2f3243;
+    --link: #8fb6ff;
+    --shadow-ink: #0f1016;
+    --accent: #8fb6ff;
+    --accent-soft: #2d3a66;
+    --surface-2: #2f3243;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 1.5rem; }
+body {
+  margin: 0;
+  color: var(--text);
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--grid) 1.2px, transparent 1.3px);
+  background-size: 22px 22px;
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "BIZ UDPGothic", Meiryo, "Noto Sans JP", sans-serif;
+  font-size: 1rem;
+  line-height: 1.9;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4, .eyebrow, .toc-title {
+  font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", Meiryo, "Noto Sans JP", sans-serif;
+  font-weight: 800;
+}
+a { color: var(--link); text-decoration-thickness: 2px; text-underline-offset: 0.2em; }
+code, pre, kbd { font-family: ui-monospace, "SFMono-Regular", Menlo, "BIZ UDGothic", Consolas, "Noto Sans Mono CJK JP", monospace; font-size: 0.92em; }
+code { background: var(--code-bg); padding: 0.1em 0.4em; border-radius: 6px; overflow-wrap: anywhere; }
+pre {
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+  box-shadow: 4px 4px 0 var(--shadow-ink);
+}
+pre code { background: none; padding: 0; font-size: 0.88rem; }
+.page { max-width: calc(var(--content) + 20rem); margin: 0 auto; padding: clamp(1rem, 3vw, 2.5rem) 16px 4rem; }
+.hero {
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 18px;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  margin-bottom: 2rem;
+  box-shadow: 8px 8px 0 var(--yellow);
+}
+.eyebrow {
+  display: table;
+  margin: 0 0 1rem;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 0.95rem;
+  padding: 0.15em 0.8em;
+  border-radius: 999px;
+  transform: none;
+}
+.hero h1 {
+  display: inline;
+  margin: 0;
+  font-size: clamp(1.9rem, 5vw, 3rem);
+  line-height: 1.3;
+  background: linear-gradient(transparent 58%, var(--yellow) 58%);
+  padding: 0 0.1em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+@media (prefers-color-scheme: dark) { .hero h1 { color: #fff; background: linear-gradient(transparent 58%, #8a6d00 58%); } }
+.lead { margin: 1.3rem 0 1.6rem; font-size: 1.08rem; max-width: 36rem; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0.8rem; margin: 0; }
+.facts div { border: 2px dashed var(--line); border-radius: 12px; padding: 0.6rem 0.9rem; background: var(--surface); }
+.facts dt { font-size: 0.78rem; color: var(--muted); font-weight: 700; }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.layout { display: grid; grid-template-columns: 1fr; gap: 1.6rem; align-items: start; }
+.toc {
+  background: #fff4c2;
+  color: #2b2d42;
+  padding: 1rem 1.1rem 1.2rem;
+  border-radius: 4px;
+  box-shadow: 3px 5px 10px rgba(43, 45, 66, 0.18);
+  transform: none;
+}
+.toc-title { margin: 0 0 0.4rem; font-size: 0.9rem; }
+.toc ol { margin: 0; padding-left: 1.3rem; line-height: 1.7; }
+.toc ol ol { list-style: none; padding-left: 0.8rem; margin: 0.1rem 0 0.4rem; font-size: 0.9rem; line-height: 1.55; }
+.toc ol ol li::before { content: "・"; color: #6b6f80; }
+.toc a { color: #2b2d42; text-decoration: none; border-bottom: 2px solid transparent; }
+.toc a:hover { border-bottom-color: #2b2d42; }
+main { min-width: 0; }
+section {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: clamp(1.2rem, 3vw, 2.2rem);
+  margin-bottom: 1.8rem;
+}
+h2 {
+  display: table;
+  margin: -2.4rem 0 1.2rem -0.4rem;
+  font-size: 1.3rem;
+  line-height: 1.3;
+  color: #2b2d42;
+  background: var(--sticker, var(--pink));
+  padding: 0.3em 0.9em;
+  border-radius: 8px;
+  transform: none;
+  box-shadow: 0 1px 3px rgba(43, 45, 66, 0.12);
+}
+h3 {
+  display: table;
+  margin: 1.8rem 0 0.6rem;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  background: linear-gradient(transparent 60%, var(--pink) 60%);
+  padding: 0 0.15em;
+}
+@media (prefers-color-scheme: dark) { h3 { background: linear-gradient(transparent 60%, #7a2d47 60%); } }
+h4 { margin: 1.4rem 0 0.4rem; font-size: 1rem; }
+p, ul, ol { margin: 0 0 1rem; }
+li { margin-bottom: 0.3rem; }
+p, li, td, dd, a { overflow-wrap: anywhere; }
+blockquote { margin: 0 0 1rem; padding: 0.3rem 0 0.3rem 1rem; border-left: 4px solid var(--line); color: var(--muted); }
+blockquote > :last-child { margin-bottom: 0; }
+table { width: 100%; border-collapse: collapse; margin: 0 0 1.2rem; font-size: 0.95rem; }
+.table-wrap { overflow-x: auto; margin: 0 0 1.2rem; }
+.table-wrap table { margin: 0; }
+th, td { padding: 0.6rem 0.8rem; text-align: left; vertical-align: top; border: 2px solid var(--ink); }
+thead th { background: var(--yellow); color: #2b2d42; font-weight: 800; }
+tbody th { white-space: nowrap; font-weight: 700; }
+td:first-child, th:first-child { min-width: 7rem; }
+.status { display: inline-block; padding: 0.05em 0.7em; border-radius: 999px; border: 2px solid var(--ink); font-size: 0.85em; font-weight: 700; }
+.note { background: var(--surface); border: 2px dashed var(--pink); border-radius: 12px; padding: 0.9rem 1.1rem; margin: 1.2rem 0; }
+.note > :last-child { margin-bottom: 0; }
+.figure { margin: 1.4rem 0; }
+.figure svg { display: block; max-width: 100%; height: auto; }
+.figure figcaption { margin-top: 0.5rem; font-size: 0.9rem; color: var(--muted); }
+.source { font-size: 0.88rem; color: var(--muted); }
+.sources-list { padding-left: 1.3rem; font-size: 0.95rem; }
+footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: center; }
+@media (min-width: 64rem) {
+  .layout { grid-template-columns: 15rem minmax(0, 1fr); }
+  .toc { position: sticky; top: 1.5rem; max-height: calc(100vh - 3rem); overflow-y: auto; }
+}
+@media print {
+  body { background: #fff; color: #000; }
+  .hero, section, pre { box-shadow: none; border-color: #444; }
+  .toc { display: none; }
+  .eyebrow, h2 { transform: none; box-shadow: none; }
+  a { color: inherit; }
+}
+#overview { --sticker: var(--pink); }
+#flow { --sticker: var(--blue); }
+#flow h2 { color: #fff; }
+#history { --sticker: var(--mint); }
+#design { --sticker: var(--ink); }
+#design h2 { color: var(--surface); }
+#sources { --sticker: var(--surface); }
+#sources h2 { color: var(--ink); border: 1px solid var(--line); }
+
+.report-details { margin: 1rem 0; border: 1px solid var(--line); border-radius: 8px; padding: 0.7rem 1rem; }
+.report-details summary { cursor: pointer; color: var(--link); font-weight: 600; }
+.report-details[open] summary { margin-bottom: 0.8rem; }
+.report-details summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+<header class="hero">
+  <p class="eyebrow">Skill anatomy</p>
+  <h1>total-recall の分析</h1>
+  <p class="lead">total-recallは、会話の保存をエージェントの思い出しに頼らず、定期収集と取りこぼしの回収で補い、次のセッションへMarkdownの記憶を渡すスキルです。中心となる判断は、会話の意味を選ぶ処理をLLMに任せ、起動条件・保存・重複除去・形式検査をシェルへ分けることです。</p>
+  <dl class="facts">
+    <div><dt>元URL</dt><dd><a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/SKILL.md">gavdalf/total-recall/.</a></dd></div>
+    <div><dt>分析コミット</dt><dd><code>437ab3656ecd</code></dd></div>
+    <div><dt>調査日</dt><dd>2026-11-13</dd></div>
+  </dl>
+</header>
+<div class="layout">
+<nav class="toc" aria-label="目次">
+  <p class="toc-title">目次</p>
+  <ol>
+<li><a href="#overview">概要と使い方</a></li>
+<li><a href="#flow">仕組みと処理の流れ</a>
+<ol>
+<li><a href="#flow-1">「夜間処理は成功したのに何も残らない」という実例</a></li>
+<li><a href="#flow-2">会話の収集と外部イベントの経路</a></li>
+</ol>
+</li>
+<li><a href="#history">作成・変更の経緯</a></li>
+<li><a href="#design">設計判断</a>
+<ol>
+<li><a href="#design-1">圧縮から独立した保存と、異なる起動条件を組み合わせる</a></li>
+<li><a href="#design-2">意味の選別と、機械的な保存条件を分ける</a></li>
+<li><a href="#design-3">退避・形式検査・人の承認を別の段階にする</a></li>
+</ol>
+</li>
+<li><a href="#sources">調査範囲と出典</a></li>
+  </ol>
+</nav>
+<main>
+<section id="overview">
+<h2>概要と使い方</h2>
+<p>total-recallは、会話の保存をエージェントの思い出しに頼らず、定期収集と取りこぼしの回収で補い、次のセッションへMarkdownの記憶を渡すスキルです。中心となる判断は、会話の意味を選ぶ処理をLLMに任せ、起動条件・保存・重複除去・形式検査をシェルへ分けることです。</p>
+<p>対象はOpenClaw形式のセッション記録を使うエージェントです。入力はJSONLの会話、既存の <code>memory/observations.md</code>、日次メモ、設定、LLMの認証情報です。Observerが優先度付きの観察を追記し、Reflectorが膨らんだ観察を統合します。任意のDream Cycleは古い情報を別ファイルへ移し、検索語と参照先を残します。<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/SKILL.md#L26-L84">構成と基本手順</a>に加え、固定コミットのREADMEは外部イベントを扱うAmbient Intelligence Engine（AIE）も説明しています。AIEは別のSKILL.mdとして定義されたスキルではなく、同じリポジトリに追加された処理系です。</p>
+<p>利用の準備は次の順です。ここでは資料にある使い方を説明しており、インストールや実行検証はしていません。</p>
+<ol>
+<li>スキルを配置し、ワークスペース、セッションの場所、APIキーを設定します。</li>
+<li><code>setup.sh</code>で保存先を作り、表示されたObserverとReflectorの定期起動を設定します。</li>
+<li>セッション開始時にRecoveryを起動し、その後で観察・重要事項・日次メモを読み込む指示を追加します。</li>
+<li>Dream Cycleを使う場合は、専用プロンプトを読むエージェントを夜間に起動するよう設定します。</li>
+</ol>
+<p>必要な環境はBash、jq、curl、python3、PyYAMLです。setupはこれらを確認します。LinuxではinotifyとsystemdがそろうとWatcherをサービス化します。定期起動とセッション開始処理は利用者が設定する構成で、setupがすべて登録するわけではありません。<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/scripts/setup.sh#L21-L60">setupの依存確認</a>と<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/scripts/setup.sh#L170-L213">手動設定の案内</a>が根拠です。</p>
+</section>
+<section id="flow">
+<h2>仕組みと処理の流れ</h2>
+<h3 id="flow-1">「夜間処理は成功したのに何も残らない」という実例</h3>
+<p><a href="https://github.com/gavdalf/total-recall/issues/9">Issue #9</a>は、Ubuntu 24とOpenClaw 2026.3.8でDream Cycleの起動を設定した際、終了コードが成功でも、観察・ログ・メトリクスが更新されない事例です。報告者は原因を、ファイル操作用のシェルを夜間処理の本体として起動していたことだと説明しています。修正前の実際の案内は <code>dream-cycle.sh preflight</code> だけを呼んでいました。これは事前準備であり、その後の分類・保存を行うエージェントがいません。この実例を、固定コミットで案内される処理へ対応付けると、次の流れになります。再実行による結果ではなく、指示とコードからの読み解きです。</p>
+<ol>
+<li><strong>エージェントを起動する。</strong> cronはDream Cycleのプロンプトを読むエージェントを起動します。ファイル操作用シェルは、そのエージェントが必要なサブコマンドを選んで呼ぶ道具です。</li>
+<li><strong>保存前の状態を確保して資料を読む。</strong> エージェントはpreflightを呼び、観察、favorites、当日の日次メモを読みます。preflightは観察のバックアップを作り、書き込みモードならGitのスナップショットも作ります。</li>
+<li><strong>何を残すか判断する。</strong> 重要度・経過日数・現在も有効かを見て、日常的な重複をまとめます。未来の日付を持つ予定は保護します。Phase 2では種類、有効期間、確信度も扱い、関連する3件以上をまとめた要約や、複数日に現れる傾向の提案を作ります。</li>
+<li><strong>原文と検索の手掛かりを保存する。</strong> エージェントは退避対象の原文・理由・IDをJSONへまとめ、archiveで日付別ファイルに保存します。残す観察には、具体的な検索語と退避先を持つ短い参照を加え、update-observationsで置き換えます。</li>
+<li><strong>記録を残して検査する。</strong> write-logとwrite-metricsでログとJSONを保存し、validateを呼びます。書き込みモードで検査が失敗した場合はrollbackを呼ぶ指示です。</li>
+</ol>
+<p>この順序は<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/prompts/dream-cycle-prompt.md#L29-L82">専用プロンプト</a>、<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/prompts/dream-cycle-prompt.md#L223-L273">未来日付の保護と要約</a>、<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/prompts/dream-cycle-prompt.md#L360-L399">保存と検査</a>に記されています。シェルの<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/scripts/dream-cycle.sh#L94-L163">preflightとarchive</a>はバックアップと形式変換を担当します。何が古いか、何が重要かはシェル自身では判断しません。</p>
+<p>検索の手掛かりにもリポジトリ内の具体例があります。プロンプトはFitbitの22,376歩という記録を、Fitbitという名前と数値を含む参照にするよう例示し、「Operational churn」のような一般的な見出しを避けています。読み込み対象を短くしても、後日の検索語が残るようにする指示です。この例は<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/prompts/dream-cycle-prompt.md#L306-L358">プロンプト内の作例</a>で、保存済みの実行ログではありません。</p>
+<h3 id="flow-2">会話の収集と外部イベントの経路</h3>
+<p>Dream Cycleが読む観察は、通常はObserverが作ります。Observerは最近更新された主セッションのJSONLを探し、時刻と発言者で抽出し、定型応答を除きます。入力のハッシュが前回と同じなら処理を省き、既存観察の末尾もLLMへ渡して重複を避けさせます。応答後は日付や装飾を除いた先頭80バイトの比較でも重複を落とし、観察へ追記してからハッシュを保存します。<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/scripts/observer-agent.sh#L124-L202">抽出と入力判定</a>、<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/scripts/observer-agent.sh#L204-L360">LLM入力から追記まで</a>が対応します。</p>
+<p>Reflectorは別のプロンプトで高優先度の保持、同じ話題の統合、古い低優先度の削減を行います。Recoveryはセッション開始時、WatcherはLinuxのファイル変更時、memoryFlushは自動圧縮前にObserverへ入る経路です。Watcherの実装が数えるのはmodifyイベントであり、資料にある「40行」はJSONLの実行時行数を毎回測る処理ではありません。<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/scripts/observer-watcher.sh#L142-L151">Watcherのカウンタ</a>と<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/config/memory-flush.json#L1-L8">圧縮前の二段階保存</a>から区別できます。</p>
+<p>AIEは有効なコネクタのイベントを <code>bus.jsonl</code> に集め、rumination-engineが会話由来の観察と合わせて考察を作ります。preconscious-selectは重要度に時間による減衰と期限の加点を適用し、話題の偏りを制限して最大5件をバッファへ残します。ambient-actionsは考察を質問、確認済み事実の保存、下書き、通知、リマインダーへ振り分けます。buffer-injectは更新されたバッファをセッションへ渡します。<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/scripts/sensor-sweep.sh#L36-L109">収集の起動条件</a>、<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/scripts/preconscious-select.sh#L85-L130">バッファの選定条件</a>、<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/scripts/ambient-actions.sh#L246-L300">行動の分類指示</a>が根拠です。READMEの直線的な図は概念の案内であり、各スクリプトの起動設定まで自動接続するものではありません。</p>
+</section>
+<section id="history">
+<h2>作成・変更の経緯</h2>
+<p>履歴上の最初のスキャフォールドは2026年2月11日の<a href="https://github.com/gavdalf/total-recall/commit/42112a916900b8966df17961940c1781280b15b1">42112a9</a>です。SKILL.mdの追加は2月18日の<a href="https://github.com/gavdalf/total-recall/commit/9285af7d9fec960f656d59c1a7328ced717b17ea">9285af7</a>で、既存の観察・統合・回収をTotal Recallとして配布し直しています。このコミットは、追記より前のハッシュ保存を後ろへ移し、Reflectorを一時ファイル経由の置き換えへ変更したことを説明しています。収集する判断だけでなく、保存途中の失敗を扱う処理も配布単位に含めた変更です。</p>
+<p>2月25日の<a href="https://github.com/gavdalf/total-recall/issues/2#issuecomment-3957412663">Issue #2の作者コメント</a>では、他のAPIを使うためにスクリプトを編集する必要をなくすと説明しています。<a href="https://github.com/gavdalf/total-recall/commit/e299c468f90bb41d904ed512d5f29999e7d846af">e299c46の差分</a>は固定されたURLとキーを環境変数へ置き換え、旧キー名との互換性を残しました。ただし現在のモデル選択は後続変更を経ており、固定コミットではObserverが <code>OBSERVER_MODEL</code>、Reflectorが <code>REFLECTOR_MODEL</code> を使います。かつての <code>LLM_MODEL</code> の案内だけで現在の選択を説明しないことが必要です。</p>
+<p>2月28日の<a href="https://github.com/gavdalf/total-recall/commit/939782300c159264e0ecdff60965e7b91aff1395">9397823</a>は、観察の肥大化への対応をまとめています。自動処理の記録を重要度1〜2に制限し、重複比較を40から80バイトへ伸ばして日付・曜日を正規化し、低い重要度を退避するコードを加えました。CHANGELOGは退避しきい値を0.5から3.0へ引き上げたと説明しますが、このコミットのコード差分では3.0未満を実際に別ファイルへ退避する処理の追加も確認できます。作者の「68%削減」という記録は、その運用での報告であり、今回再現した値ではありません。</p>
+<p>3月11日の<a href="https://github.com/gavdalf/total-recall/commit/83d432605337c6a9a18c865f5a51f97868132445">83d4326</a>では、Issue #9に対応してDream Cycleの案内をpreflight単独からエージェントの起動へ変更しました。3月14日の<a href="https://github.com/gavdalf/total-recall/commit/e6500c428fb46ba0a6fff06b52473ab112484793">e6500c4</a>は、夜間処理が900秒の制限に2夜続けて達したという作者の説明を受け、毎晩の整理と週次の傾向分析を分ける方針を文書化しています。ただし変更対象はCHANGELOGとDream Cycle READMEの2ファイルです。固定コミットの専用プロンプトは傾向分析をPhase 2の手順に残し、検索の手掛かりも4〜5個と指示しています。「分割が全実行経路へ反映済み」とは読めません。</p>
+<p>3月22日付の<a href="https://github.com/gavdalf/total-recall/commit/b7e14051c14079e2c5414ba4f3314e1dce36149a">履歴上の取り込み</a>は、<a href="https://github.com/gavdalf/total-recall/pull/14">PR #14</a>の無料モデルへの変更と応答フィールド対応を含みます。PR提出者の動作確認の説明と、botによるレビュー文は作者自身の検証結果とは区別します。4月1日の固定点では、作者が<a href="https://github.com/gavdalf/total-recall/issues/22">Issue #22</a>で開発を休止し、保守対応が遅くなると告知しています。</p>
+</section>
+<section id="design">
+<h2>設計判断</h2>
+<h3 id="design-1">圧縮から独立した保存と、異なる起動条件を組み合わせる</h3>
+<p>記憶の保存先を会話コンテキストの外へ置く理由を、作者の文書は「圧縮の影響を受けず、人が読め、OpenClaw本体の変更を要しない」と説明しています。保存先にはMarkdownを採用しています。データベースやベクトル基盤を必須にしない方針は明示されていますが、他の保存方式を比較試験して却下した記録までは確認していません。<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/docs/architecture.md#L76-L83">外部ファイルの理由</a>が出典です。</p>
+<p>収集の問いは「定期実行だけで、手動リセット直前の会話を拾えるか」です。資料は、Watcherの5分の待機中に/newが起こると、15分ごとのcronも自動圧縮用フックも間に合わない場面を挙げます。そこで起動時のRecoveryを追加し、読み込みより先に保存を試みます。これは起動条件を補完する設計です。「5層」の数え方は文書により異なるため、各経路の条件で理解する必要があります。<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/docs/architecture.md#L7-L18">取りこぼしの説明</a>と<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/templates/AGENTS-snippet.md#L1-L19">開始時の順序</a>が対応します。実装上、Recoveryは名前の逆順で候補を選び、生JSONL末尾のハッシュを比較します。Observerが抽出した本文のハッシュとは生成方法が違うため、この比較だけで未保存の有無を厳密に証明するものではありません。</p>
+<h3 id="design-2">意味の選別と、機械的な保存条件を分ける</h3>
+<p>記録を増やしすぎない判断は、同一入力の再処理、表現を変えた重複、低重要度の蓄積で条件が違います。採用されている構成は、入力ハッシュ、既存観察を示すプロンプト、応答後の文字列比較、経時的な重要度低下を組み合わせます。たとえばプロンプトの「Daily briefing sent」と「Saturday briefing sent to the user」は同じ事実と扱います。単なる文字列一致では捉えにくい違いをLLMへ判断させ、その後にシェルが正規化した接頭部で比較する構成です。<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/prompts/observer-system.txt#L67-L86">重複の具体例</a>と<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/scripts/observer-agent.sh#L284-L348">追記後に記録するハッシュ</a>が根拠です。この役割分担が一般にどれだけ重複を減らすかは未検証です。</p>
+<p>保持の判断では、Reflectorが高優先度を残し、Dream Cycleが未来の予定を保護します。一方、検査コードは文章の意味全体を評価しません。Reflectorは空の応答と入力より語数の多い応答を拒否しますが、同語数は許し、40〜60%削減の達成までは要求しません。<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/prompts/reflector-system.txt#L1-L31">保持のプロンプト</a>と<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/scripts/reflector-agent.sh#L147-L175">書き換え前の検査</a>を分けて読むと、LLMへの目標と保存時の合格条件の違いが分かります。</p>
+<h3 id="design-3">退避・形式検査・人の承認を別の段階にする</h3>
+<p>Dream Cycleは、常時読み込む内容を減らす際、原文を退避し、具体語を含む参照を残す方式を採用します。さらに、複数日に繰り返された行動を恒久的な指示へ変える段階では、自動適用せずstagingへ提案を書きます。承認を待つ対象は、整理した観察の保存そのものではなく、AGENTS.mdやMEMORY.mdなどへ反映する提案です。review補助コードのapproveも提案を <code>.approved.md</code> へ改名するだけで、対象文書を書き換えません。<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/prompts/dream-cycle-prompt.md#L148-L221">提案の条件</a>と<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/scripts/staging-review.sh#L155-L190">承認処理</a>が出典です。</p>
+<p>保存先と検査条件には、次の区別があります。これらは確認できた動作の境界であり、成果物全体の品質を採点したものではありません。</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>対象</th><th>指示・資料の条件</th><th>補助コードが実際に確認する条件</th></tr></thead>
+<tbody>
+<tr><td>要約する観察の件数</td><td>関連する3件以上、source_idsも3個以上</td><td>source_idsは空でない文字列の配列、件数は1個以上</td></tr>
+<tr><td>Dream Cycleの完了判定</td><td>誤退避ゼロ、8,000未満、10%以上削減を報告</td><td>validateは概算トークン数と当日の退避ファイルのImpactを検査。削減率は判定しない</td></tr>
+<tr><td>メトリクス</td><td>指定JSON項目を記録</td><td>write-metricsは必須キーが非nullかを確認。値の正しさは再計算しない</td></tr>
+<tr><td>モデル変更のテスト</td><td>無料モデル、応答フィールド、フォールバック</td><td>validate-fixes.shはソース内の文字列をgrepで確認。API応答や記憶保持を実行評価しない</td></tr>
+</tbody>
+</table>
+</div>
+<p>要約の件数は<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/prompts/dream-cycle-prompt.md#L227-L273">プロンプト</a>と<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/scripts/dream-cycle.sh#L185-L230">chunkの検査</a>、メトリクスと完了条件は<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/scripts/dream-cycle.sh#L363-L387">write-metrics</a>と<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/scripts/dream-cycle.sh#L676-L730">validate</a>、モデル変更は<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/tests/validate-fixes.sh#L1-L102">静的な検査スクリプト</a>で確認できます。validateの既定目標は5,000で、ファイルのバイト数を4で割った概算を使います。SKILL.mdの8,000という設定案内や、プロンプトの8,000未満という移行条件とは同じ基準ではありません。</p>
+<p>validateが数える「誤退避」は、当日の日付別アーカイブのImpactがcriticalまたは数値9以上である件数です。原文と保存後の全項目を照合する検査ではありません。またdecayは重要度3未満を <code>memory/archived-observations.md</code> へ移し、validateが読む日付別保存先とは異なります。schemaは7種類を定義しますが、Observerのプロンプトにはdecisionもあり、decayの未知の種類はfactの率へ戻ります。<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/schemas/observation-format.md#L19-L94">schema</a>、<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/prompts/observer-system.txt#L16-L26">Observerの種類</a>、<a href="https://github.com/gavdalf/total-recall/blob/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f/scripts/dream-cycle.sh#L411-L526">decayの実装</a>から、説明資料・生成指示・読取り側の条件を区別できます。</p>
+</section>
+<section id="sources">
+<h2>調査範囲と出典</h2>
+<div class="table-wrap">
+<table>
+<thead><tr><th>項目</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td>元URL</td><td><a href="https://github.com/gavdalf/total-recall/tree/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f">gavdalf/total-recallの固定コミット</a></td></tr>
+<tr><td>分析コミット</td><td><code>437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f</code></td></tr>
+<tr><td>調査日</td><td>2026-11-13</td></tr>
+<tr><td>実行検証</td><td>なし</td></tr>
+</tbody>
+</table>
+</div>
+<details class="report-details">
+<summary>詳しい調査記録を見る</summary>
+<div class="table-wrap">
+<table>
+<thead><tr><th>項目</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td>調査範囲</td><td>ルートSKILL.md、README、CHANGELOG、setup、Observer・Reflector・Recovery・Watcher、両システムプロンプト、Dream Cycleのプロンプト・補助コード・README、staging-review、observation-format、architecture、cron・memoryFlush設定、AGENTSテンプレート。AIEの設定と主要スクリプトも参照しました。到達可能なコミット履歴の全一覧を確認し、配布化・provider設定・肥大化対策・起動修正の差分、夜間分割の変更対象を確認しました。Issue/PRは全ページの索引を確認し、#2・#9・#14・#22の詳細を取得しました。</td></tr>
+<tr><td>未確認の範囲</td><td>コネクタ個別の外部サービス動作、対象外の議論詳細、作者が公表していない比較案・動機、性能・費用・品質の再現性は未確認です。#14の詳細は本文・コメント・レビュー・変更ファイルを取得しましたが、大きい応答の一部は表示が省略されたため、未読のレビュー発言を判断根拠にしていません。固定点より後の議論は当時の実装の根拠にしていません。</td></tr>
+</tbody>
+</table>
+</div>
+<p>事例にはIssue #9の報告と、プロンプトに含まれる検索参照の作例を使いました。保存された会話入力と期待出力を組にした実行結果は確認していません。testsの固定モデル確認は形式上の回帰検査です。CHANGELOGの削減率・誤退避件数やPRの動作報告は、それぞれの記述者による報告として扱いました。外部記事・依存サービス・派生リポジトリは取得していません。</p>
+</details>
+</section>
+</main>
+</div>
+<footer>Skill anatomy が生成した分析のHTML版。本文は同じフォルダのMarkdown版から補助CLIが生成したもので、完了記録はMarkdown版が持つ。</footer>
+</div>
+</body>
+</html>

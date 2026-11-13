@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'vitest';
 import { htmlPath, inspectHtml } from '../src/html.ts';
@@ -32,15 +33,12 @@ test('published HTML templates satisfy the safety conditions', () => {
 });
 
 test('published HTML examples satisfy the safety conditions', () => {
-  for (const name of [
-    'skill-anatomy.html',
-    'yomiyasu/skill-analyses/yomiyasu.html',
-    'yomiyasu/repository-analysis.html',
-  ]) {
-    const example = readFileSync(
-      fileURLToPath(new URL(`../examples/${name}`, import.meta.url)),
-      'utf8',
-    );
+  const root = fileURLToPath(new URL('../examples/', import.meta.url));
+  const names = readdirSync(root, { recursive: true, encoding: 'utf8' }).filter((name) =>
+    name.endsWith('.html'),
+  );
+  for (const name of names) {
+    const example = readFileSync(path.join(root, name), 'utf8');
     assert.deepEqual(inspectHtml(example), [], name);
     assert.match(example, /<details class="report-details">/);
     assert.doesNotMatch(example, /rotate\(/);

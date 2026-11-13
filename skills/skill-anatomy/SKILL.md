@@ -18,7 +18,7 @@ Node.js 22以上とGitを使う。PR・Issueの取得には認証済みGitHub CL
 1. `prepare URL` を実行する。`--no-confirm` は利用者が指定した場合だけ付ける。応答の `plan_file` をPLANとし、対象・調査範囲・件数・`pending`・`warning`・保存先 `destination` を利用者に示す。本文の分析やレポートの更新はまだ始めない。利用者がURLと一緒に伝えた関心事は重点として、答える問いと説明する章を方針に含める。選択範囲のレポートは完了済みでも毎回書き直すので、その旨も伝える。
 2. `--no-confirm` がなければ開始してよいか1回尋ね、OKの後に `approve PLAN` を実行する。確認を省く場合も方針は示し、方針や対象を変えたら再承認を受ける。ツールの権限確認は省略しない。
 3. [調査手順](references/research.md)に従い、PLANの固定コミットから根拠を調べ、2つの手法ごとにメモを残す。
-4. [執筆と完成基準](references/report-format.md)と[書き方](references/writing.md)に従い、`status PLAN` で `pending` のスキルを1件ずつ分析し、各項目の `report` に日本語Markdownを保存する。`complete PLAN --skill '元のSKILL.mdのパス'` を実行する。`complete` は同じ内容のHTML版を隣に生成する。応答に `warnings` があれば、分量は書き方の推敲手順で削り、HTML版で扱えない記法は[固定する形式](references/report-format.md#固定する形式)の記法に直して保存し直し、再度 `complete` を実行する。`done` / `total` を伝え、残件がなくなるまで続ける。中断時はPLANと残件を示す。
+4. [執筆と完成基準](references/report-format.md)と[書き方](references/writing.md)に従い、`status PLAN` で `pending` のスキルを1件ずつ分析し、各項目の `report` に日本語Markdownを保存する。`complete PLAN --skill '元のSKILL.mdのパス'` を実行する。`complete` は同じ内容のHTML版を隣に生成する。応答に `warnings` があれば直して保存し直し、再度 `complete` を実行する。分量が範囲を超えていれば書き方の推敲手順で削り、範囲に満たない・章の本文が短い場合は欠けている理由・実例・出典を補い、HTML版で扱えない記法は[固定する形式](references/report-format.md#固定する形式)の記法に直す。`done` / `total` を伝え、残件がなくなるまで続ける。中断時はPLANと残件を示す。
 5. 同じ基準で `repository-analysis.md` を書き、`complete PLAN --repository` を実行する。HTML版の生成結果は分析の完了と別に報告し、生成できなくても完了記録と本文は変えない。
 
 選択範囲外のスキルと削除されたスキルの過去レポートは残す。同じ保存先で分析を並行して進めない。

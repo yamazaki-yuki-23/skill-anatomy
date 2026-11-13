@@ -34,7 +34,7 @@ Node.js 22以上とGitが必要です。PR・Issueも調べる場合は、GitHub
 
 スキルごとのレポートは、リポジトリにある実例1つで入力から出力までの動作を追い、作者の説明と履歴・ファイルで確認できた事実を分けて、重要な設計判断ごとに問い・確認できる選択肢・判断の理由を説明します。実例がない場合は入力を作らず、その旨を記します。全体のレポートは、スキルの一覧と共通する設計をまとめます。どのレポートも同じ見出しを同じ順で使い、固定コミットの出典を付け、確認できない動機は未確認と記します。対象スキルの実行や点数付けはしません。
 
-結果は[承認済みの見本レポート](examples/yomiyasu/skill-analyses/yomiyasu.md)と[その他の作例](examples/README.md)で確認できます。分析手法と文章の規則はスキルの[参照資料](skills/skill-anatomy/references/)に、手法の出どころは[docs/analysis-methods.md](docs/analysis-methods.md)にあります。
+結果は[total-recall の作例](examples/total-recall/skill-analyses/root.md)と[その他の作例](examples/README.md)で確認できます。分析手法と文章の規則はスキルの[参照資料](skills/skill-anatomy/references/)に、手法の出どころは[docs/analysis-methods.md](docs/analysis-methods.md)にあります。
 
 URLと一緒に「SKILL.mdと参照資料の役割分担を説明して」のような質問を添えると、該当する章でその点を深く説明します。
 
@@ -66,7 +66,7 @@ export SKILL_ANATOMY_WORKSPACE="$HOME/.local/share/skill-anatomy"
 <details>
 <summary>CLIを直接使う、ロック、整理</summary>
 
-エージェントは `node skills/skill-anatomy/dist/cli.js` を使います（`--help` でコマンド一覧）。`prepare URL` はコミットを固定し、そのファイルを `.cache/sources/<owner>/<repo>/<commit>/` に展開してパス・バイト数・行数の索引を書き、Issueの索引を取得してPLANを返します。`prepare URL --workspace PATH` は今回の保存先を上書きします。`approve PLAN` はOKを記録します。`status PLAN` は各スキルの `pending` / `done`、全体分析の状態、HTML版の有無と検査結果を示します。`complete PLAN --skill PATH` または `--repository` は完了を記録し、`assets/templates/` のテンプレート（見た目を変えるには `<style>` を編集）を使ってMarkdownからHTML版を生成し、`report_bytes` を返します。個別分析が20,000バイトを超えるか、HTML版で扱えない記法があると `warnings` を付けます。`discussion PLAN --number N` は、Issue・PRの本文、コメント、レビュー、変更ファイルを1回で取得します。HTML版は完了記録に含めません。
+エージェントは `node skills/skill-anatomy/dist/cli.js` を使います（`--help` でコマンド一覧）。`prepare URL` はコミットを固定し、そのファイルを `.cache/sources/<owner>/<repo>/<commit>/` に展開してパス・バイト数・行数の索引を書き、Issueの索引を取得してPLANを返します。`prepare URL --workspace PATH` は今回の保存先を上書きします。`approve PLAN` はOKを記録します。`status PLAN` は各スキルの `pending` / `done`、全体分析の状態、HTML版の有無と検査結果を示します。`complete PLAN --skill PATH` または `--repository` は完了を記録し、`assets/templates/` のテンプレート（見た目を変えるには `<style>` を編集）を使ってMarkdownからHTML版を生成し、`report_bytes` を返します。レポートが分量の範囲（個別分析 5,000〜24,000バイト、全体分析 1,500〜12,000バイト、各章の本文 40バイト以上）を外れるか、HTML版で扱えない記法があると `warnings` を付けます。`discussion PLAN --number N` は、Issue・PRの本文、コメント、レビュー、変更ファイルを1回で取得します。HTML版は完了記録に含めません。
 
 `prepare`・`approve`・`complete` は、同じリポジトリの状態を別プロセスが更新中なら `.state.json.lock` のエラーで止まります。異常終了でロックが残ったら、エラーが示すロックファイルの `hostname`・`pid`・`created_at` を確認し、保存先を共有するどのマシンでも実行中でないことを確かめてから、未使用の名前に変更して再実行します。自動回復はありません。同じ保存先で同じリポジトリを並行して調べないでください。
 
