@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>scaffold-exercises の分析</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #fffdf7;
+  --grid: #d9d4c4;
+  --surface: #ffffff;
+  --ink: #2b2d42;
+  --text: #2b2d42;
+  --muted: #6b6f80;
+  --line: #e6e2d6;
+  --code-bg: #f4f1e8;
+  --yellow: #ffe066;
+  --pink: #ffa3bf;
+  --blue: #2457f5;
+  --mint: #8fe3d2;
+  --link: #1d4ed8;
+  --shadow-ink: #2b2d42;
+  --accent: #2457f5;
+  --accent-soft: #dfe7ff;
+  --surface-2: #f4f1e8;
+  --content: 44rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1d26;
+    --grid: #343647;
+    --surface: #262837;
+    --ink: #eceef5;
+    --text: #e6e8f0;
+    --muted: #a3a8ba;
+    --line: #3d4052;
+    --code-bg: #2f3243;
+    --link: #8fb6ff;
+    --shadow-ink: #0f1016;
+    --accent: #8fb6ff;
+    --accent-soft: #2d3a66;
+    --surface-2: #2f3243;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 1.5rem; }
+body {
+  margin: 0;
+  color: var(--text);
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--grid) 1.2px, transparent 1.3px);
+  background-size: 22px 22px;
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "BIZ UDPGothic", Meiryo, "Noto Sans JP", sans-serif;
+  font-size: 1rem;
+  line-height: 1.9;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4, .eyebrow, .toc-title {
+  font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", Meiryo, "Noto Sans JP", sans-serif;
+  font-weight: 800;
+}
+a { color: var(--link); text-decoration-thickness: 2px; text-underline-offset: 0.2em; }
+code, pre, kbd { font-family: ui-monospace, "SFMono-Regular", Menlo, "BIZ UDGothic", Consolas, "Noto Sans Mono CJK JP", monospace; font-size: 0.92em; }
+code { background: var(--code-bg); padding: 0.1em 0.4em; border-radius: 6px; overflow-wrap: anywhere; }
+pre {
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+  box-shadow: 4px 4px 0 var(--shadow-ink);
+}
+pre code { background: none; padding: 0; font-size: 0.88rem; }
+.page { max-width: calc(var(--content) + 20rem); margin: 0 auto; padding: clamp(1rem, 3vw, 2.5rem) 16px 4rem; }
+.hero {
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 18px;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  margin-bottom: 2rem;
+  box-shadow: 8px 8px 0 var(--yellow);
+}
+.eyebrow {
+  display: table;
+  margin: 0 0 1rem;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 0.95rem;
+  padding: 0.15em 0.8em;
+  border-radius: 999px;
+  transform: none;
+}
+.hero h1 {
+  display: inline;
+  margin: 0;
+  font-size: clamp(1.9rem, 5vw, 3rem);
+  line-height: 1.3;
+  background: linear-gradient(transparent 58%, var(--yellow) 58%);
+  padding: 0 0.1em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+@media (prefers-color-scheme: dark) { .hero h1 { color: #fff; background: linear-gradient(transparent 58%, #8a6d00 58%); } }
+.lead { margin: 1.3rem 0 1.6rem; font-size: 1.08rem; max-width: 36rem; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0.8rem; margin: 0; }
+.facts div { border: 2px dashed var(--line); border-radius: 12px; padding: 0.6rem 0.9rem; background: var(--surface); }
+.facts dt { font-size: 0.78rem; color: var(--muted); font-weight: 700; }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.layout { display: grid; grid-template-columns: 1fr; gap: 1.6rem; align-items: start; }
+.toc {
+  background: #fff4c2;
+  color: #2b2d42;
+  padding: 1rem 1.1rem 1.2rem;
+  border-radius: 4px;
+  box-shadow: 3px 5px 10px rgba(43, 45, 66, 0.18);
+  transform: none;
+}
+.toc-title { margin: 0 0 0.4rem; font-size: 0.9rem; }
+.toc ol { margin: 0; padding-left: 1.3rem; line-height: 1.7; }
+.toc ol ol { list-style: none; padding-left: 0.8rem; margin: 0.1rem 0 0.4rem; font-size: 0.9rem; line-height: 1.55; }
+.toc ol ol li::before { content: "・"; color: #6b6f80; }
+.toc a { color: #2b2d42; text-decoration: none; border-bottom: 2px solid transparent; }
+.toc a:hover { border-bottom-color: #2b2d42; }
+main { min-width: 0; }
+section {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: clamp(1.2rem, 3vw, 2.2rem);
+  margin-bottom: 1.8rem;
+}
+h2 {
+  display: table;
+  margin: -2.4rem 0 1.2rem -0.4rem;
+  font-size: 1.3rem;
+  line-height: 1.3;
+  color: #2b2d42;
+  background: var(--sticker, var(--pink));
+  padding: 0.3em 0.9em;
+  border-radius: 8px;
+  transform: none;
+  box-shadow: 0 1px 3px rgba(43, 45, 66, 0.12);
+}
+h3 {
+  display: table;
+  margin: 1.8rem 0 0.6rem;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  background: linear-gradient(transparent 60%, var(--pink) 60%);
+  padding: 0 0.15em;
+}
+@media (prefers-color-scheme: dark) { h3 { background: linear-gradient(transparent 60%, #7a2d47 60%); } }
+h4 { margin: 1.4rem 0 0.4rem; font-size: 1rem; }
+p, ul, ol { margin: 0 0 1rem; }
+li { margin-bottom: 0.3rem; }
+p, li, td, dd, a { overflow-wrap: anywhere; }
+blockquote { margin: 0 0 1rem; padding: 0.3rem 0 0.3rem 1rem; border-left: 4px solid var(--line); color: var(--muted); }
+blockquote > :last-child { margin-bottom: 0; }
+table { width: 100%; border-collapse: collapse; margin: 0 0 1.2rem; font-size: 0.95rem; }
+.table-wrap { overflow-x: auto; margin: 0 0 1.2rem; }
+.table-wrap table { margin: 0; }
+th, td { padding: 0.6rem 0.8rem; text-align: left; vertical-align: top; border: 2px solid var(--ink); }
+thead th { background: var(--yellow); color: #2b2d42; font-weight: 800; }
+tbody th { white-space: nowrap; font-weight: 700; }
+td:first-child, th:first-child { min-width: 7rem; }
+.status { display: inline-block; padding: 0.05em 0.7em; border-radius: 999px; border: 2px solid var(--ink); font-size: 0.85em; font-weight: 700; }
+.note { background: var(--surface); border: 2px dashed var(--pink); border-radius: 12px; padding: 0.9rem 1.1rem; margin: 1.2rem 0; }
+.note > :last-child { margin-bottom: 0; }
+.figure { margin: 1.4rem 0; }
+.figure svg { display: block; max-width: 100%; height: auto; }
+.figure figcaption { margin-top: 0.5rem; font-size: 0.9rem; color: var(--muted); }
+.source { font-size: 0.88rem; color: var(--muted); }
+.sources-list { padding-left: 1.3rem; font-size: 0.95rem; }
+footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: center; }
+@media (min-width: 64rem) {
+  .layout { grid-template-columns: 15rem minmax(0, 1fr); }
+  .toc { position: sticky; top: 1.5rem; max-height: calc(100vh - 3rem); overflow-y: auto; }
+}
+@media print {
+  body { background: #fff; color: #000; }
+  .hero, section, pre { box-shadow: none; border-color: #444; }
+  .toc { display: none; }
+  .eyebrow, h2 { transform: none; box-shadow: none; }
+  a { color: inherit; }
+}
+#overview { --sticker: var(--pink); }
+#flow { --sticker: var(--blue); }
+#flow h2 { color: #fff; }
+#history { --sticker: var(--mint); }
+#design { --sticker: var(--ink); }
+#design h2 { color: var(--surface); }
+#sources { --sticker: var(--surface); }
+#sources h2 { color: var(--ink); border: 1px solid var(--line); }
+
+.report-details { margin: 1rem 0; border: 1px solid var(--line); border-radius: 8px; padding: 0.7rem 1rem; }
+.report-details summary { cursor: pointer; color: var(--link); font-weight: 600; }
+.report-details[open] summary { margin-bottom: 0.8rem; }
+.report-details summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+<header class="hero">
+  <p class="eyebrow">Skill anatomy</p>
+  <h1>scaffold-exercises の分析</h1>
+  <p class="lead">scaffold-exercises は、教材の計画を番号付きの演習ディレクトリへ変換するスキルです。内容がまだ決まっていない演習は説明用の雛形として作り、教材用 lint が受け入れる構造に整えることを中心にしています。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/scaffold-exercises/SKILL.md#L3-L25">役割と既定の種類</a></p>
+  <dl class="facts">
+    <div><dt>元URL</dt><dd><a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/scaffold-exercises/SKILL.md">mattpocock/skills/skills/misc/scaffold-exercises</a></dd></div>
+    <div><dt>分析コミット</dt><dd><code>4ae2317ddb22</code></dd></div>
+    <div><dt>調査日</dt><dd>2026-11-13</dd></div>
+  </dl>
+</header>
+<div class="layout">
+<nav class="toc" aria-label="目次">
+  <p class="toc-title">目次</p>
+  <ol>
+<li><a href="#overview">概要と使い方</a></li>
+<li><a href="#flow">仕組みと処理の流れ</a></li>
+<li><a href="#history">作成・変更の経緯</a></li>
+<li><a href="#design">設計判断</a>
+<ol>
+<li><a href="#design-1">種類が未指定なら説明用の雛形にする</a></li>
+<li><a href="#design-2">教材構造の確認を lint に委ねる</a></li>
+</ol>
+</li>
+<li><a href="#sources">調査範囲と出典</a></li>
+  </ol>
+</nav>
+<main>
+<section id="overview">
+<h2>概要と使い方</h2>
+<p>scaffold-exercises は、教材の計画を番号付きの演習ディレクトリへ変換するスキルです。内容がまだ決まっていない演習は説明用の雛形として作り、教材用 lint が受け入れる構造に整えることを中心にしています。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/scaffold-exercises/SKILL.md#L3-L25">役割と既定の種類</a></p>
+<p>入力はセクション名、演習番号・演習名、必要な種類を含む計画です。出力は <code>exercises/</code> 以下のフォルダと各種類の <code>readme.md</code> です。<code>problem</code> は学習者が取り組む場所、<code>solution</code> は解答、<code>explainer</code> は TODO を持たない説明教材を表します。本文は lint 通過後の Git コミットも成果の終点に含めています。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/scaffold-exercises/SKILL.md#L8-L42">種類と成果物</a></p>
+<p>想定環境は、pnpm から <code>ai-hero-cli internal lint</code> を利用できる教材プロジェクトと Git です。このリポジトリには教材用 lint の実装は同梱されておらず、パッケージの追加手順もありません。スキルは教材内容を完成させるための実装集ではなく、エージェントが既存の計画を配置する指示書です。</p>
+</section>
+<section id="flow">
+<h2>仕組みと処理の流れ</h2>
+<p>本文には「Section 05: Memory Skill Building」という計画と生成先の対応例があります。この例を使うと、演習の種類が明示されている場所と、省略されている場所で動作がどう変わるかを追えます。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/scaffold-exercises/SKILL.md#L79-L106">計画と出力例</a></p>
+<ol>
+<li>エージェントはセクション05を <code>05-memory-skill-building</code> にし、演習番号と名前を読み取ります。名前は小文字とハイフンで表します。</li>
+<li>種類の指定がない <code>05.01 Introduction to Memory</code> と <code>05.03 Long-term Memory</code> には、それぞれ <code>explainer/</code> を作ります。</li>
+<li><code>05.02 Short-term Memory</code> は計画が3種類を明示しているため、<code>explainer/</code>、<code>problem/</code>、<code>solution/</code> を作ります。</li>
+<li>各種類の直下に、対応するタイトルを持つ <code>readme.md</code> を配置します。この例の出力は合計5つの readme で、コードファイルの生成例はありません。</li>
+<li>本文の工程に沿って教材用 lint を呼び、報告されたエラーを直して再検査します。冒頭の完了指示では、その後にコミットします。</li>
+</ol>
+<p>出力例のうち、同じ演習の目的別フォルダは次のように対応します。これは本文の例の抜粋で、今回生成した教材ではありません。</p>
+<pre><code class="language-text">exercises/05-memory-skill-building/
+  05.02-short-term-memory/
+    explainer/readme.md
+    problem/readme.md
+    solution/readme.md</code></pre>
+<p>フォルダ名の決定、readme の内容、エラーへの対応はエージェントの責務です。lint は生成した構造を検査する外部の道具で、別のスキルを呼び出して作業を引き継ぐ記載はありません。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/scaffold-exercises/SKILL.md#L44-L50">処理の順序</a></p>
+<p>教材の移動・改番は別の利用経路です。本文は <code>git mv</code>、番号の更新、移動後の lint を指示し、既存教材の配置が変わる場合にも同じ検査へ戻します。この経路の具体例は embeddings の03から04への改番で、Section05 の新規生成例とは別です。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/scaffold-exercises/SKILL.md#L65-L77">移動時の指示</a></p>
+</section>
+<section id="history">
+<h2>作成・変更の経緯</h2>
+<p><a href="https://github.com/mattpocock/skills/commit/8e51ff765eb242b65324e9b770526cc53e9db767">2026年2月20日の追加</a>の時点で、番号の規則、3種類の教材、readme だけの雛形、lint による確認、Section05 の例が揃っています。したがって、現在の主要な生成方針が後から評価結果に応じて導入されたとは確認できません。</p>
+<p><a href="https://github.com/mattpocock/skills/commit/d1beb4fe61574b3325ed96cd0d9a31966d31a02a">3月13日の変更</a>は、起動条件を含む name・description のメタデータを追加し、冒頭の指示を「lint を通す」から「lint を通してコミットする」へ変えました。本文中の5段階の工程は lint の再試行までなので、コミットという終点はこの冒頭の追加から読み取れます。変更は確認できますが、コミットを加えた個別の動機は記録から確認できません。</p>
+<p>その後、4月の再配置で misc 配下となり、<a href="https://github.com/mattpocock/skills/commit/7efc3d2a3899c141f4d64e11be2227e0049db626">7月1日の整理</a>で配布上の非推奨区分が明文化されました。現在の<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/.out-of-scope/frozen-misc-skills.md#L1-L15">保守方針</a>は、作者が日常利用せず変更の正しさを把握しにくいため保守を凍結すると説明しています。教材生成の規則そのものを廃止したという記載ではありません。</p>
+</section>
+<section id="design">
+<h2>設計判断</h2>
+<h3 id="design-1">種類が未指定なら説明用の雛形にする</h3>
+<p>計画が演習名しか含まないとき、コードを書き始めるか、説明の置き場所だけ作るかが分かれます。本文で確認できる採用結果は <code>explainer</code> を既定にすることです。問題・解答の種類が明示されたときは、その指定を優先します。Section05 の例では、この条件により05.01と05.03は1フォルダ、05.02は3フォルダになります。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/scaffold-exercises/SKILL.md#L17-L25">既定値</a>・<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/scaffold-exercises/SKILL.md#L83-L105">作例</a></p>
+<p>これは、未指定の計画に対して問題コードや解答を創作する必要がない構成だと読めます。readme だけの雛形を認め、コードがある場合だけ <code>main.ts</code> を要求する条件とも対応します。ただし作者がその目的で他案を比較し、説明用を選んだという発言は未確認です。確認できる判断基準は、計画の明示指定とコードの有無です。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/scaffold-exercises/SKILL.md#L27-L42">必要ファイル</a></p>
+<h3 id="design-2">教材構造の確認を lint に委ねる</h3>
+<p>空ディレクトリを作っただけでは、スキルが要求する成果物にはなりません。本文が示す検査対象には、主要フォルダの非空 readme、リンク、禁止ファイル、コードを持つ場合の <code>main.ts</code> が含まれます。たとえば <code>.gitkeep</code> を置くだけの雛形は認めず、内容のある readme を作るよう指示しています。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/scaffold-exercises/SKILL.md#L52-L63">検査規則の要約</a></p>
+<p>ここで確認できる合格基準は、あくまで SKILL.md が説明する lint の要約です。「各演習に種類のフォルダがある」という説明に加え、problem・explainer・explainer.1 のどれかが必要とも書かれているので、solution だけで十分とは読めません。一方、実際の lint が読む保存階層・必須キー・判定コードはリポジトリ内にありません。教材内容の正確さや教育効果、各コード例の実行成功を検査する基準までは、この要約からは確認できません。</p>
+<p>一般のファイル規則はタイトルと説明を勧めますが、本文の作例はタイトルだけを配置しています。また非空条件の説明もタイトル1行を許しています。したがってタイトルだけの作例を完成した教材本文と扱う必要はなく、ここでは構造を整えるための最小の内容として読めます。外部 lint が本当に受け入れるかは未実行です。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/scaffold-exercises/SKILL.md#L29-L42">readme の条件</a>・<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/scaffold-exercises/SKILL.md#L98-L106">作例の内容</a></p>
+</section>
+<section id="sources">
+<h2>調査範囲と出典</h2>
+<div class="table-wrap">
+<table>
+<thead><tr><th>項目</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td>元URL</td><td><a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/scaffold-exercises/SKILL.md">scaffold-exercises</a></td></tr>
+<tr><td>分析コミット</td><td><code>4ae2317ddb22b046e26455e4f9c9b3aaaf62212d</code></td></tr>
+<tr><td>調査日</td><td>2026-11-13</td></tr>
+<tr><td>実行検証</td><td>なし</td></tr>
+</tbody>
+</table>
+</div>
+<details class="report-details">
+<summary>詳しい調査記録を見る</summary>
+<div class="table-wrap">
+<table>
+<thead><tr><th>項目</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td>調査範囲</td><td>本文全体、agents/openai.yaml、misc/README、保守方針、plugin.json、link-skills.sh、package.json、固定ツリー一覧、移動前を含む履歴、初出と3月13日の差分。Issue/PR索引全体を関連語で確認し、共通配布方針の Issue #164 と PR #1025 を確認しました。</td></tr>
+<tr><td>未確認の範囲</td><td>コミット終点を加えた動機、外部 ai-hero-cli の実装と検査結果。固定ツリーに専用 evals/tests/fixtures、共有教材検査への参照はありません。直接関連する議論は索引の関連語検索では見つかりませんでした。</td></tr>
+</tbody>
+</table>
+</div>
+<p><a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/package.json#L12-L21">package.json</a>にあるのはリリース管理用のスクリプト・依存で、教材用 lint の実装ではありません。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/scaffold-exercises/agents/openai.yaml#L1-L3">表示用メタデータ</a>も実行条件や検査コードを追加していません。</p>
+</details>
+</section>
+</main>
+</div>
+<footer>Skill anatomy が生成した分析のHTML版。本文は同じフォルダのMarkdown版から補助CLIが生成したもので、完了記録はMarkdown版が持つ。</footer>
+</div>
+</body>
+</html>

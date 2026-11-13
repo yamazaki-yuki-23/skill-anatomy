@@ -10,11 +10,39 @@ import {
 import path from "node:path";
 import { digest } from "./hash.js";
 import { htmlPath, inspectHtml } from "./html.js";
+import { parseMarkdown } from "./markdown.js";
 import { renderReport } from "./render.js";
 import { inside, readJson, writeJson, withStateLock } from "./storage.js";
 import { readTemplate } from "./templates.js";
 export const VERSION = 3;
-export const REPORT_BYTES_GUIDE = 20000;
+export const REPORT_LENGTH = {
+  skill: { min: 5000, max: 24000 },
+  repository: { min: 1500, max: 12000 },
+  chapter: 40
+};
+export function lengthWarnings(text, repository) {
+  const warnings = [];
+  const kind = repository ? "全体分析" : "個別分析";
+  const range = repository ? REPORT_LENGTH.repository : REPORT_LENGTH.skill;
+  const bytes = Buffer.byteLength(text, "utf8");
+  if (bytes < range.min)
+    warnings.push(`${kind}が分量の範囲（${range.min}〜${range.max}バイト）より少ない: ${bytes}バイト。必要な理由・実例・出典が欠けていないか確かめてください`);
+  if (bytes > range.max)
+    warnings.push(`${kind}が分量の範囲（${range.min}〜${range.max}バイト）を超えています: ${bytes}バイト。書き方の推敲手順に従って削るか、必要な理由を調査記録に残してください`);
+  const lines = text.replace(/\r\n?/g, `
+`).split(`
+`);
+  const headings = parseMarkdown(text).blocks.filter((block) => block.kind === "heading" && block.level === 2);
+  headings.forEach((heading, index) => {
+    const next = headings[index + 1];
+    const body = lines.slice(heading.line, next ? next.line - 1 : undefined).join(`
+`);
+    const title = heading.kind === "heading" ? heading.text : "";
+    if (Buffer.byteLength(body.trim(), "utf8") < REPORT_LENGTH.chapter)
+      warnings.push(`章「${title}」の本文が${REPORT_LENGTH.chapter}バイトに満たない`);
+  });
+  return warnings;
+}
 export function timestamp() {
   return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 }
@@ -189,9 +217,7 @@ export function complete(planFile, skill, repository = false) {
     writeJson(plan.state_file, state);
     const text = readFileSync(report, "utf8");
     const reportBytes = Buffer.byteLength(text, "utf8");
-    const warnings = [];
-    if (!repository && reportBytes > REPORT_BYTES_GUIDE)
-      warnings.push(`個別分析が分量の目安（${REPORT_BYTES_GUIDE}バイト、承認済み見本の約2倍）を超えています: ${reportBytes}バイト。書き方の推敲手順に従って削るか、必要な理由を調査記録に残してください`);
+    const warnings = lengthWarnings(text, repository);
     const done = selected.filter((e) => state.skills[e.skill]?.status === "done").length;
     const html = writeHtml(plan, report, text, repository ? null : skill, done, selected.length, warnings);
     return {

@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>mattpocock/skills の全体分析</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #fffdf7;
+  --grid: #d9d4c4;
+  --surface: #ffffff;
+  --ink: #2b2d42;
+  --text: #2b2d42;
+  --muted: #6b6f80;
+  --line: #e6e2d6;
+  --code-bg: #f4f1e8;
+  --yellow: #ffe066;
+  --pink: #ffa3bf;
+  --blue: #2457f5;
+  --mint: #8fe3d2;
+  --link: #1d4ed8;
+  --shadow-ink: #2b2d42;
+  --accent: #2457f5;
+  --accent-soft: #dfe7ff;
+  --surface-2: #f4f1e8;
+  --content: 44rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1d26;
+    --grid: #343647;
+    --surface: #262837;
+    --ink: #eceef5;
+    --text: #e6e8f0;
+    --muted: #a3a8ba;
+    --line: #3d4052;
+    --code-bg: #2f3243;
+    --link: #8fb6ff;
+    --shadow-ink: #0f1016;
+    --accent: #8fb6ff;
+    --accent-soft: #2d3a66;
+    --surface-2: #2f3243;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 1.5rem; }
+body {
+  margin: 0;
+  color: var(--text);
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--grid) 1.2px, transparent 1.3px);
+  background-size: 22px 22px;
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "BIZ UDPGothic", Meiryo, "Noto Sans JP", sans-serif;
+  font-size: 1rem;
+  line-height: 1.9;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4, .eyebrow, .toc-title {
+  font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", Meiryo, "Noto Sans JP", sans-serif;
+  font-weight: 800;
+}
+a { color: var(--link); text-decoration-thickness: 2px; text-underline-offset: 0.2em; }
+code, pre, kbd { font-family: ui-monospace, "SFMono-Regular", Menlo, "BIZ UDGothic", Consolas, "Noto Sans Mono CJK JP", monospace; font-size: 0.92em; }
+code { background: var(--code-bg); padding: 0.1em 0.4em; border-radius: 6px; overflow-wrap: anywhere; }
+pre {
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+  box-shadow: 4px 4px 0 var(--shadow-ink);
+}
+pre code { background: none; padding: 0; font-size: 0.88rem; }
+.page { max-width: calc(var(--content) + 20rem); margin: 0 auto; padding: clamp(1rem, 3vw, 2.5rem) 16px 4rem; }
+.hero {
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 18px;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  margin-bottom: 2rem;
+  box-shadow: 8px 8px 0 var(--yellow);
+}
+.eyebrow {
+  display: table;
+  margin: 0 0 1rem;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 0.95rem;
+  padding: 0.15em 0.8em;
+  border-radius: 999px;
+  transform: none;
+}
+.hero h1 {
+  display: inline;
+  margin: 0;
+  font-size: clamp(1.9rem, 5vw, 3rem);
+  line-height: 1.3;
+  background: linear-gradient(transparent 58%, var(--yellow) 58%);
+  padding: 0 0.1em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+@media (prefers-color-scheme: dark) { .hero h1 { color: #fff; background: linear-gradient(transparent 58%, #8a6d00 58%); } }
+.lead { margin: 1.3rem 0 1.6rem; font-size: 1.08rem; max-width: 36rem; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0.8rem; margin: 0; }
+.facts div { border: 2px dashed var(--line); border-radius: 12px; padding: 0.6rem 0.9rem; background: var(--surface); }
+.facts dt { font-size: 0.78rem; color: var(--muted); font-weight: 700; }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.layout { display: grid; grid-template-columns: 1fr; gap: 1.6rem; align-items: start; }
+.toc {
+  background: #fff4c2;
+  color: #2b2d42;
+  padding: 1rem 1.1rem 1.2rem;
+  border-radius: 4px;
+  box-shadow: 3px 5px 10px rgba(43, 45, 66, 0.18);
+  transform: none;
+}
+.toc-title { margin: 0 0 0.4rem; font-size: 0.9rem; }
+.toc ol { margin: 0; padding-left: 1.3rem; line-height: 1.7; }
+.toc ol ol { list-style: none; padding-left: 0.8rem; margin: 0.1rem 0 0.4rem; font-size: 0.9rem; line-height: 1.55; }
+.toc ol ol li::before { content: "・"; color: #6b6f80; }
+.toc a { color: #2b2d42; text-decoration: none; border-bottom: 2px solid transparent; }
+.toc a:hover { border-bottom-color: #2b2d42; }
+main { min-width: 0; }
+section {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: clamp(1.2rem, 3vw, 2.2rem);
+  margin-bottom: 1.8rem;
+}
+h2 {
+  display: table;
+  margin: -2.4rem 0 1.2rem -0.4rem;
+  font-size: 1.3rem;
+  line-height: 1.3;
+  color: #2b2d42;
+  background: var(--sticker, var(--pink));
+  padding: 0.3em 0.9em;
+  border-radius: 8px;
+  transform: none;
+  box-shadow: 0 1px 3px rgba(43, 45, 66, 0.12);
+}
+h3 {
+  display: table;
+  margin: 1.8rem 0 0.6rem;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  background: linear-gradient(transparent 60%, var(--pink) 60%);
+  padding: 0 0.15em;
+}
+@media (prefers-color-scheme: dark) { h3 { background: linear-gradient(transparent 60%, #7a2d47 60%); } }
+h4 { margin: 1.4rem 0 0.4rem; font-size: 1rem; }
+p, ul, ol { margin: 0 0 1rem; }
+li { margin-bottom: 0.3rem; }
+p, li, td, dd, a { overflow-wrap: anywhere; }
+blockquote { margin: 0 0 1rem; padding: 0.3rem 0 0.3rem 1rem; border-left: 4px solid var(--line); color: var(--muted); }
+blockquote > :last-child { margin-bottom: 0; }
+table { width: 100%; border-collapse: collapse; margin: 0 0 1.2rem; font-size: 0.95rem; }
+.table-wrap { overflow-x: auto; margin: 0 0 1.2rem; }
+.table-wrap table { margin: 0; }
+th, td { padding: 0.6rem 0.8rem; text-align: left; vertical-align: top; border: 2px solid var(--ink); }
+thead th { background: var(--yellow); color: #2b2d42; font-weight: 800; }
+tbody th { white-space: nowrap; font-weight: 700; }
+td:first-child, th:first-child { min-width: 7rem; }
+.status { display: inline-block; padding: 0.05em 0.7em; border-radius: 999px; border: 2px solid var(--ink); color: #2b2d42; font-size: 0.85em; font-weight: 700; white-space: nowrap; }
+.status.done { background: var(--mint); }
+.status.pending { background: var(--yellow); }
+.status.skipped { background: transparent; color: var(--muted); border-style: dashed; }
+.alt { display: inline-block; margin-left: 0.4em; padding: 0 0.55em; border: 2px solid var(--link); border-radius: 999px; font-size: 0.8em; font-weight: 700; text-decoration: none; white-space: nowrap; }
+#skills table { min-width: 44rem; }
+#skills td:nth-child(4), #skills td:nth-child(5) { white-space: nowrap; }
+.note { background: var(--surface); border: 2px dashed var(--pink); border-radius: 12px; padding: 0.9rem 1.1rem; margin: 1.2rem 0; }
+.note > :last-child { margin-bottom: 0; }
+.figure { margin: 1.4rem 0; }
+.figure svg { display: block; max-width: 100%; height: auto; }
+.figure figcaption { margin-top: 0.5rem; font-size: 0.9rem; color: var(--muted); }
+.source { font-size: 0.88rem; color: var(--muted); }
+.sources-list { padding-left: 1.3rem; font-size: 0.95rem; }
+footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: center; }
+@media (min-width: 64rem) {
+  .layout { grid-template-columns: 15rem minmax(0, 1fr); }
+  .toc { position: sticky; top: 1.5rem; max-height: calc(100vh - 3rem); overflow-y: auto; }
+}
+@media print {
+  body { background: #fff; color: #000; }
+  .hero, section, pre { box-shadow: none; border-color: #444; }
+  .toc { display: none; }
+  .eyebrow, h2 { transform: none; box-shadow: none; }
+  a { color: inherit; }
+}
+#overview { --sticker: var(--pink); }
+#skills { --sticker: var(--blue); }
+#skills h2 { color: #fff; }
+#relations { --sticker: var(--mint); }
+#learning { --sticker: var(--ink); }
+#learning h2 { color: var(--surface); }
+#sources { --sticker: var(--surface); }
+#sources h2 { color: var(--ink); border: 1px solid var(--line); }
+
+.report-details { margin: 1rem 0; border: 1px solid var(--line); border-radius: 8px; padding: 0.7rem 1rem; }
+.report-details summary { cursor: pointer; color: var(--link); font-weight: 600; }
+.report-details[open] summary { margin-bottom: 0.8rem; }
+.report-details summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+<header class="hero">
+  <p class="eyebrow">Skill anatomy</p>
+  <h1>mattpocock/skills の全体分析</h1>
+  <p class="lead">今回の対象である misc の4スキルは、Git操作の制約、テストデータの型表現、教材の雛形、コミット前検査を扱う独立した道具です。日常利用しない道具を残しつつ、通常のプラグイン配布と保守から外すという方針でまとめられています。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/README.md#L1-L8">misc の一覧</a>・<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/.out-of-scope/frozen-misc-skills.md#L1-L15">凍結方針</a></p>
+  <dl class="facts">
+    <div><dt>元URL</dt><dd><a href="https://github.com/mattpocock/skills/tree/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d">mattpocock/skills</a></dd></div>
+    <div><dt>分析コミット</dt><dd><code>4ae2317ddb22</code></dd></div>
+    <div><dt>調査日</dt><dd>2026-11-13</dd></div>
+    <div><dt>分析状況</dt><dd>完了 4 / 未完了 0</dd></div>
+  </dl>
+</header>
+<div class="layout">
+<nav class="toc" aria-label="目次">
+  <p class="toc-title">目次</p>
+  <ol>
+<li><a href="#overview">概要</a></li>
+<li><a href="#skills">スキル一覧</a></li>
+<li><a href="#relations">スキル同士の関係</a></li>
+<li><a href="#learning">共通する設計</a>
+<ol>
+<li><a href="#learning-1">動作の境界を本文の条件で決める</a></li>
+<li><a href="#learning-2">完成確認は同じ強さの評価を意味しない</a></li>
+<li><a href="#learning-3">保存することと通常配布することを分ける</a></li>
+</ol>
+</li>
+<li><a href="#sources">調査範囲と出典</a></li>
+  </ol>
+</nav>
+<main>
+<section id="overview">
+<h2>概要</h2>
+<p>今回の対象である misc の4スキルは、Git操作の制約、テストデータの型表現、教材の雛形、コミット前検査を扱う独立した道具です。日常利用しない道具を残しつつ、通常のプラグイン配布と保守から外すという方針でまとめられています。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/README.md#L1-L8">misc の一覧</a>・<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/.out-of-scope/frozen-misc-skills.md#L1-L15">凍結方針</a></p>
+<p>各スキルは SKILL.md と表示用の agents/openai.yaml を持ち、Git遮断だけが実行用の補助シェルスクリプトを同梱します。必要な環境は一様ではありません。Git遮断は Claude Code と Bash・jq・grep、型表現の移行は TypeScript と shoehorn、教材生成は pnpm と ai-hero-cli、コミット前検査は Husky・lint-staged・Prettier を前提にしています。外部ツールの実装は今回の対象リポジトリ外です。</p>
+<p>分析状況：完了 4 / 未完了 0。対象範囲：固定コミットの <code>skills/misc</code> フォルダと、配布・保守・履歴の説明に必要な関連ファイルです。engineering、productivity、in-progress、deprecated 配下の個別スキルは対象外で、リポジトリ全体の機能を網羅する分析ではありません。</p>
+</section>
+<section id="skills">
+<h2>スキル一覧</h2>
+<div class="table-wrap">
+<table>
+<thead><tr><th>スキル</th><th>元のパス</th><th>役割</th><th>分析状況</th><th>個別分析</th></tr></thead>
+<tbody>
+<tr><td>git-guardrails-claude-code</td><td>skills/misc/git-guardrails-claude-code/SKILL.md</td><td>Bash 実行前の文字列照合フックを設置</td><td>完了</td><td><a href="skill-analyses/misc/git-guardrails-claude-code.md">処理・経緯・設計</a></td></tr>
+<tr><td>migrate-to-shoehorn</td><td>skills/misc/migrate-to-shoehorn/SKILL.md</td><td>テスト用の型アサーションを関数へ移行</td><td>完了</td><td><a href="skill-analyses/misc/migrate-to-shoehorn.md">処理・経緯・設計</a></td></tr>
+<tr><td>scaffold-exercises</td><td>skills/misc/scaffold-exercises/SKILL.md</td><td>計画から教材フォルダと readme を生成</td><td>完了</td><td><a href="skill-analyses/misc/scaffold-exercises.md">処理・経緯・設計</a></td></tr>
+<tr><td>setup-pre-commit</td><td>skills/misc/setup-pre-commit/SKILL.md</td><td>コミット前の整形・検査を設定</td><td>完了</td><td><a href="skill-analyses/misc/setup-pre-commit.md">処理・経緯・設計</a></td></tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="relations">
+<h2>スキル同士の関係</h2>
+<p>この4件の本文には、相互の呼び出しや、あるスキルの成果物を次のスキルへ引き渡す指定はありません。共通フォルダに置かれている理由は処理の連鎖ではなく、作者が保持するものの利用頻度が低いという位置づけです。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/README.md#L1-L8">分類の説明</a></p>
+<p>Git を使うスキルも役割が異なります。git-guardrails-claude-code は実行直前の遮断を設定し、setup-pre-commit はコミット時の確認を設定します。scaffold-exercises は教材生成後のコミットを指示しますが、ほかの2件の導入を前提にしていません。3件を連続した導入手順とみなす根拠はありません。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/git-guardrails-claude-code/SKILL.md#L43-L58">遮断設定</a>・<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/setup-pre-commit/SKILL.md#L37-L47">コミット前検査</a>・<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/scaffold-exercises/SKILL.md#L8-L8">教材の終点</a></p>
+<p>個別の流れは各分析の「仕組みと処理の流れ」で追えます。型表現の移行と教材生成は外部パッケージを利用する作業指示が中心で、Git遮断は設置後に動く同梱コードがあります。コミット前検査は、生成した設定から外部ツールと対象プロジェクトの scripts を呼ぶ形です。表示用の agents/openai.yaml は4件とも名前と短い説明だけで、連携処理や実行設定は持っていません。</p>
+</section>
+<section id="learning">
+<h2>共通する設計</h2>
+<h3 id="learning-1">動作の境界を本文の条件で決める</h3>
+<p>4件とも、何を処理対象とし、何を完成とするかを本文の条件で定めています。ただし条件の種類は異なります。Git遮断は利用者が適用範囲とパターンを選び、型表現の移行はテスト専用という境界と入力意図で関数を選びます。教材生成は計画の種類指定とコードの有無に従い、コミット前検査は既存の設定や scripts の有無に合わせます。</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>対象</th><th>動作を分ける条件</th><th>具体的に変わる行動</th></tr></thead>
+<tbody>
+<tr><td>Git遮断</td><td>プロジェクト単位か全体か</td><td>コピー先と設定ファイルを選ぶ</td></tr>
+<tr><td>型表現の移行</td><td>部分データか意図的な不正値か</td><td>fromPartial と fromAny を使い分ける</td></tr>
+<tr><td>教材生成</td><td>計画で種類が明示されているか</td><td>未指定なら explainer、指定時はその種類を作る</td></tr>
+<tr><td>コミット前検査</td><td>既存設定・検査 script があるか</td><td>設定を保ち、存在しない script の呼び出しを省く</td></tr>
+</tbody>
+</table>
+</div>
+<p>根拠と適用条件の詳説は、<a href="skill-analyses/misc/git-guardrails-claude-code.md">Git遮断の設計</a>、<a href="skill-analyses/misc/migrate-to-shoehorn.md">型表現の使い分け</a>、<a href="skill-analyses/misc/scaffold-exercises.md">教材の既定値</a>、<a href="skill-analyses/misc/setup-pre-commit.md">既存環境への適応</a>にまとめています。これらは本文から読める構造上の共通点であり、作者が4件に共通する設計原則として宣言したものではありません。</p>
+<h3 id="learning-2">完成確認は同じ強さの評価を意味しない</h3>
+<p>各スキルには最後に確認する行動がありますが、確かめる対象が異なります。Git遮断には1つの JSON 入力と終了コード・標準エラーの期待値があり、型表現の移行にはプロジェクトの型検査の指示があります。教材生成では外部 lint に構造を確かめさせ、コミット前検査ではファイル確認、lint-staged 単独実行、最後のコミットを通します。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/git-guardrails-claude-code/SKILL.md#L87-L95">遮断の期待値</a>・<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/migrate-to-shoehorn/SKILL.md#L112-L118">移行後の確認</a>・<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/scaffold-exercises/SKILL.md#L44-L63">教材の検査</a>・<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/setup-pre-commit/SKILL.md#L73-L85">フックの確認</a></p>
+<p>固定ツリーには選択4件の専用評価スイートや保存された実行結果はなく、外部 lint のコードもありません。このため、確認の指示があることを成果全般の保証へ広げられません。Git遮断の未採用 PR に記載されたテスト件数や、Issue 投稿者の修正版の検証結果も、固定コミットの評価結果には含めていません。</p>
+<h3 id="learning-3">保存することと通常配布することを分ける</h3>
+<p>misc をプラグインに含めないことは、<a href="https://github.com/mattpocock/skills/issues/164#issuecomment-4418682499">Issue #164 の作者回答</a>で意図的だと確認できます。<a href="https://github.com/mattpocock/skills/commit/7efc3d2a3899c141f4d64e11be2227e0049db626">7月1日の変更</a>は、その扱いを README などにも反映しました。変更の説明によれば、プラグイン定義はこの変更前から misc を含んでおらず、7月に初めて削除したわけではありません。</p>
+<p>さらに、作者による <a href="https://github.com/mattpocock/skills/pull/1025">PR #1025</a>は、ローカル開発用のリンク生成でも misc を除外し、通常配布しない位置づけと揃えると説明しています。固定コミットの<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/scripts/link-skills.sh#L18-L32">スクリプト</a>にはその除外条件があります。これは新しくリンクする対象の条件であり、すでに存在する古いリンクを削除する処理までは示していません。</p>
+<p><a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/.out-of-scope/frozen-misc-skills.md#L1-L15">凍結方針</a>が述べる理由は、作者が日常的に使わず修正の妥当性を判断できないことと、利用頻度に対して保守コストが高いことです。一方で、そのまま使える人のためにファイルは残します。設計の保持と保守の継続を分ける判断が、今回の4件に共通する現在の位置づけです。</p>
+</section>
+<section id="sources">
+<h2>調査範囲と出典</h2>
+<div class="table-wrap">
+<table>
+<thead><tr><th>項目</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td>元URL</td><td><a href="https://github.com/mattpocock/skills/tree/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc">固定コミットの skills/misc</a></td></tr>
+<tr><td>分析コミット</td><td><code>4ae2317ddb22b046e26455e4f9c9b3aaaf62212d</code></td></tr>
+<tr><td>調査日</td><td>2026-11-13</td></tr>
+<tr><td>実行検証</td><td>なし</td></tr>
+</tbody>
+</table>
+</div>
+<details class="report-details">
+<summary>詳しい調査記録を見る</summary>
+<div class="table-wrap">
+<table>
+<thead><tr><th>項目</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td>調査範囲</td><td>4件の SKILL.md と agents/openai.yaml、同梱シェルコード、misc/README、.out-of-scope/frozen-misc-skills.md、.claude-plugin/plugin.json、scripts/link-skills.sh、package.json。固定ツリー一覧、移動前を追う本文履歴と重要差分。Issue/PR索引全体を関連語で確認し、Issue #14・#164・#301・#465・#898、PR #27・#60・#1025 の本文・コメント・取得対象のレビュー・変更ファイルを読みました。</td></tr>
+<tr><td>未確認の範囲</td><td>対象外スキルの個別設計、外部依存の実装、外部フォークの修正、専用評価がない対象の一般的な品質。初期の採用動機が記録されていない箇所は各分析に明記しました。Issue/PRは調査時点の情報で、固定コミットの実装と分けました。</td></tr>
+</tbody>
+</table>
+</div>
+<p>議論の取得対象では API エラーは記録されていません。作者アカウントの投稿でも AI 生成と明示されたトリアージ文は各個別分析で区別しました。未採用案は現在の実装に含めず、過去レポートの再利用はありません。</p>
+</details>
+</section>
+</main>
+</div>
+<footer>Skill anatomy が生成した全体分析のHTML版。本文は同じフォルダのMarkdown版から補助CLIが生成したもので、完了記録はMarkdown版が持つ。</footer>
+</div>
+</body>
+</html>

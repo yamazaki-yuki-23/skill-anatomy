@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>migrate-to-shoehorn の分析</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #fffdf7;
+  --grid: #d9d4c4;
+  --surface: #ffffff;
+  --ink: #2b2d42;
+  --text: #2b2d42;
+  --muted: #6b6f80;
+  --line: #e6e2d6;
+  --code-bg: #f4f1e8;
+  --yellow: #ffe066;
+  --pink: #ffa3bf;
+  --blue: #2457f5;
+  --mint: #8fe3d2;
+  --link: #1d4ed8;
+  --shadow-ink: #2b2d42;
+  --accent: #2457f5;
+  --accent-soft: #dfe7ff;
+  --surface-2: #f4f1e8;
+  --content: 44rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1d26;
+    --grid: #343647;
+    --surface: #262837;
+    --ink: #eceef5;
+    --text: #e6e8f0;
+    --muted: #a3a8ba;
+    --line: #3d4052;
+    --code-bg: #2f3243;
+    --link: #8fb6ff;
+    --shadow-ink: #0f1016;
+    --accent: #8fb6ff;
+    --accent-soft: #2d3a66;
+    --surface-2: #2f3243;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 1.5rem; }
+body {
+  margin: 0;
+  color: var(--text);
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--grid) 1.2px, transparent 1.3px);
+  background-size: 22px 22px;
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "BIZ UDPGothic", Meiryo, "Noto Sans JP", sans-serif;
+  font-size: 1rem;
+  line-height: 1.9;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4, .eyebrow, .toc-title {
+  font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", Meiryo, "Noto Sans JP", sans-serif;
+  font-weight: 800;
+}
+a { color: var(--link); text-decoration-thickness: 2px; text-underline-offset: 0.2em; }
+code, pre, kbd { font-family: ui-monospace, "SFMono-Regular", Menlo, "BIZ UDGothic", Consolas, "Noto Sans Mono CJK JP", monospace; font-size: 0.92em; }
+code { background: var(--code-bg); padding: 0.1em 0.4em; border-radius: 6px; overflow-wrap: anywhere; }
+pre {
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+  box-shadow: 4px 4px 0 var(--shadow-ink);
+}
+pre code { background: none; padding: 0; font-size: 0.88rem; }
+.page { max-width: calc(var(--content) + 20rem); margin: 0 auto; padding: clamp(1rem, 3vw, 2.5rem) 16px 4rem; }
+.hero {
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 18px;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  margin-bottom: 2rem;
+  box-shadow: 8px 8px 0 var(--yellow);
+}
+.eyebrow {
+  display: table;
+  margin: 0 0 1rem;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 0.95rem;
+  padding: 0.15em 0.8em;
+  border-radius: 999px;
+  transform: none;
+}
+.hero h1 {
+  display: inline;
+  margin: 0;
+  font-size: clamp(1.9rem, 5vw, 3rem);
+  line-height: 1.3;
+  background: linear-gradient(transparent 58%, var(--yellow) 58%);
+  padding: 0 0.1em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+@media (prefers-color-scheme: dark) { .hero h1 { color: #fff; background: linear-gradient(transparent 58%, #8a6d00 58%); } }
+.lead { margin: 1.3rem 0 1.6rem; font-size: 1.08rem; max-width: 36rem; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0.8rem; margin: 0; }
+.facts div { border: 2px dashed var(--line); border-radius: 12px; padding: 0.6rem 0.9rem; background: var(--surface); }
+.facts dt { font-size: 0.78rem; color: var(--muted); font-weight: 700; }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.layout { display: grid; grid-template-columns: 1fr; gap: 1.6rem; align-items: start; }
+.toc {
+  background: #fff4c2;
+  color: #2b2d42;
+  padding: 1rem 1.1rem 1.2rem;
+  border-radius: 4px;
+  box-shadow: 3px 5px 10px rgba(43, 45, 66, 0.18);
+  transform: none;
+}
+.toc-title { margin: 0 0 0.4rem; font-size: 0.9rem; }
+.toc ol { margin: 0; padding-left: 1.3rem; line-height: 1.7; }
+.toc ol ol { list-style: none; padding-left: 0.8rem; margin: 0.1rem 0 0.4rem; font-size: 0.9rem; line-height: 1.55; }
+.toc ol ol li::before { content: "・"; color: #6b6f80; }
+.toc a { color: #2b2d42; text-decoration: none; border-bottom: 2px solid transparent; }
+.toc a:hover { border-bottom-color: #2b2d42; }
+main { min-width: 0; }
+section {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: clamp(1.2rem, 3vw, 2.2rem);
+  margin-bottom: 1.8rem;
+}
+h2 {
+  display: table;
+  margin: -2.4rem 0 1.2rem -0.4rem;
+  font-size: 1.3rem;
+  line-height: 1.3;
+  color: #2b2d42;
+  background: var(--sticker, var(--pink));
+  padding: 0.3em 0.9em;
+  border-radius: 8px;
+  transform: none;
+  box-shadow: 0 1px 3px rgba(43, 45, 66, 0.12);
+}
+h3 {
+  display: table;
+  margin: 1.8rem 0 0.6rem;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  background: linear-gradient(transparent 60%, var(--pink) 60%);
+  padding: 0 0.15em;
+}
+@media (prefers-color-scheme: dark) { h3 { background: linear-gradient(transparent 60%, #7a2d47 60%); } }
+h4 { margin: 1.4rem 0 0.4rem; font-size: 1rem; }
+p, ul, ol { margin: 0 0 1rem; }
+li { margin-bottom: 0.3rem; }
+p, li, td, dd, a { overflow-wrap: anywhere; }
+blockquote { margin: 0 0 1rem; padding: 0.3rem 0 0.3rem 1rem; border-left: 4px solid var(--line); color: var(--muted); }
+blockquote > :last-child { margin-bottom: 0; }
+table { width: 100%; border-collapse: collapse; margin: 0 0 1.2rem; font-size: 0.95rem; }
+.table-wrap { overflow-x: auto; margin: 0 0 1.2rem; }
+.table-wrap table { margin: 0; }
+th, td { padding: 0.6rem 0.8rem; text-align: left; vertical-align: top; border: 2px solid var(--ink); }
+thead th { background: var(--yellow); color: #2b2d42; font-weight: 800; }
+tbody th { white-space: nowrap; font-weight: 700; }
+td:first-child, th:first-child { min-width: 7rem; }
+.status { display: inline-block; padding: 0.05em 0.7em; border-radius: 999px; border: 2px solid var(--ink); font-size: 0.85em; font-weight: 700; }
+.note { background: var(--surface); border: 2px dashed var(--pink); border-radius: 12px; padding: 0.9rem 1.1rem; margin: 1.2rem 0; }
+.note > :last-child { margin-bottom: 0; }
+.figure { margin: 1.4rem 0; }
+.figure svg { display: block; max-width: 100%; height: auto; }
+.figure figcaption { margin-top: 0.5rem; font-size: 0.9rem; color: var(--muted); }
+.source { font-size: 0.88rem; color: var(--muted); }
+.sources-list { padding-left: 1.3rem; font-size: 0.95rem; }
+footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: center; }
+@media (min-width: 64rem) {
+  .layout { grid-template-columns: 15rem minmax(0, 1fr); }
+  .toc { position: sticky; top: 1.5rem; max-height: calc(100vh - 3rem); overflow-y: auto; }
+}
+@media print {
+  body { background: #fff; color: #000; }
+  .hero, section, pre { box-shadow: none; border-color: #444; }
+  .toc { display: none; }
+  .eyebrow, h2 { transform: none; box-shadow: none; }
+  a { color: inherit; }
+}
+#overview { --sticker: var(--pink); }
+#flow { --sticker: var(--blue); }
+#flow h2 { color: #fff; }
+#history { --sticker: var(--mint); }
+#design { --sticker: var(--ink); }
+#design h2 { color: var(--surface); }
+#sources { --sticker: var(--surface); }
+#sources h2 { color: var(--ink); border: 1px solid var(--line); }
+
+.report-details { margin: 1rem 0; border: 1px solid var(--line); border-radius: 8px; padding: 0.7rem 1rem; }
+.report-details summary { cursor: pointer; color: var(--link); font-weight: 600; }
+.report-details[open] summary { margin-bottom: 0.8rem; }
+.report-details summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+<header class="hero">
+  <p class="eyebrow">Skill anatomy</p>
+  <h1>migrate-to-shoehorn の分析</h1>
+  <p class="lead">migrate-to-shoehorn は、テスト内の型アサーションを、部分データ用と意図的な型違い用の関数に置き換えるスキルです。テストで使わないプロパティを埋める負担と、誤った入力を作る必要を区別し、移行後もテストの意図を保つ構成です。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/migrate-to-shoehorn/SKILL.md#L3-L18">課題と利用条件</a></p>
+  <dl class="facts">
+    <div><dt>元URL</dt><dd><a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/migrate-to-shoehorn/SKILL.md">mattpocock/skills/skills/misc/migrate-to-shoehorn</a></dd></div>
+    <div><dt>分析コミット</dt><dd><code>4ae2317ddb22</code></dd></div>
+    <div><dt>調査日</dt><dd>2026-11-13</dd></div>
+  </dl>
+</header>
+<div class="layout">
+<nav class="toc" aria-label="目次">
+  <p class="toc-title">目次</p>
+  <ol>
+<li><a href="#overview">概要と使い方</a></li>
+<li><a href="#flow">仕組みと処理の流れ</a></li>
+<li><a href="#history">作成・変更の経緯</a></li>
+<li><a href="#design">設計判断</a>
+<ol>
+<li><a href="#design-1">データ不足と意図的な型違いを分ける</a></li>
+<li><a href="#design-2">本番コードへ適用せず、型検査で終える</a></li>
+</ol>
+</li>
+<li><a href="#sources">調査範囲と出典</a></li>
+  </ol>
+</nav>
+<main>
+<section id="overview">
+<h2>概要と使い方</h2>
+<p>migrate-to-shoehorn は、テスト内の型アサーションを、部分データ用と意図的な型違い用の関数に置き換えるスキルです。テストで使わないプロパティを埋める負担と、誤った入力を作る必要を区別し、移行後もテストの意図を保つ構成です。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/migrate-to-shoehorn/SKILL.md#L3-L18">課題と利用条件</a></p>
+<p>TypeScript の型アサーションとは、ここでは <code>as Request</code> のように値を特定の型として扱わせる記述です。入力は、問題になっているテストファイルと、部分データが必要なのか、不正なデータを意図的に渡したいのかという要件です。出力は <code>@total-typescript/shoehorn</code> の関数呼び出しと import を持つテストコードです。必要な環境はパッケージを追加できる TypeScript プロジェクトと型検査の手段で、スキル自体に変換スクリプトは同梱されていません。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/migrate-to-shoehorn/SKILL.md#L105-L118">移行工程</a></p>
+<p>適用範囲はテストコードに限定され、本番コードでの使用は禁止されています。この境界は、入力を正常な完成形にするための変更ではなく、テストのためにデータを省略したり型を外したりする変更を扱うために重要です。これは指示と作例からの読み解きで、ライブラリ実装の安全性を確認した結論ではありません。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/migrate-to-shoehorn/SKILL.md#L10-L18">適用境界</a></p>
+</section>
+<section id="flow">
+<h2>仕組みと処理の流れ</h2>
+<p>代表例は本文の <code>getUser({ body: { id: &quot;123&quot; } } as Request)</code> です。前にある型の例では Request は body のほか headers と cookies も持ちますが、このテストが必要とするのは body.id だけです。スキルは、この省略を <code>fromPartial</code> で表すよう指示します。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/migrate-to-shoehorn/SKILL.md#L28-L63">Request の例</a></p>
+<ol>
+<li>エージェントは対象ファイルと、少数のプロパティだけ必要な大きなオブジェクトを扱うか、不正データを渡すテストがあるかを利用者へ尋ねます。</li>
+<li>パッケージを追加し、本文が示す <code>*.test.ts</code> と <code>*.spec.ts</code> の <code>as</code> 記述を探します。</li>
+<li>代表例では <code>as Request</code> を外し、同じ <code>body.id = &quot;123&quot;</code> を持つオブジェクトを <code>fromPartial(...)</code> で囲みます。</li>
+<li><code>fromPartial</code> の import を追加し、プロジェクトの型検査を行うよう指示されています。</li>
+</ol>
+<p>移行の対応関係は次の作例です。これは元の本文にあるコードで、今回実行した変換結果ではありません。</p>
+<pre><code class="language-ts">// 変更前
+getUser({ body: { id: &quot;123&quot; } } as Request);
+
+// 変更後（fromPartial の import を追加）
+getUser(fromPartial({ body: { id: &quot;123&quot; } }));</code></pre>
+<p>この経路では ID の文字列を数値へ直したり、不要な headers を埋め直したりしません。変わるのは省略したデータを型の側へ渡す表現です。どのアサーションをどう置き換えるかの判断はエージェントが担い、部分データの扱いは外部ライブラリへ委ねます。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/migrate-to-shoehorn/SKILL.md#L65-L79">対応する変換例</a></p>
+<p>別の経路として、本文は <code>id: 123</code> を意図的に渡す二重アサーションを <code>fromAny</code> に置き換えています。また関数一覧には完全なオブジェクトを要求する <code>fromExact</code> もありますが、移行チェックリストの主経路は <code>fromPartial</code> と <code>fromAny</code> の2つです。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/migrate-to-shoehorn/SKILL.md#L81-L103">不正データの例と関数一覧</a></p>
+<p>型検査の実行は完了確認として書かれていますが、検査コマンド、入力ごとの期待診断、専用の採点コードは本文にありません。掲載された <code>it(...)</code> は説明用のテストコードであり、このリポジトリで実行可能なテスト一式や保存済み実行結果ではありません。</p>
+</section>
+<section id="history">
+<h2>作成・変更の経緯</h2>
+<p><a href="https://github.com/mattpocock/skills/commit/64b2f9924555a561896157b17606c042cd01053c">2026年2月3日の追加</a>では、ルート直下にこのスキルが置かれました。<a href="https://github.com/mattpocock/skills/commit/c90b246c926a940bb4b74c90bf39f75b2e414319">翌日の変更</a>では、既存の変換例を保ったまま、テスト専用という禁止条件と、移行前に利用者へ要件を尋ねる工程が加えられています。</p>
+<p>変更前は、パッケージ追加から型検査までが単一のチェックリストでした。変更後は、まず問題のあるファイル、部分データの必要性、不正データの必要性を確かめ、その後に移行へ進みます。したがって、たとえば二重アサーションを見つけた場合も、不正値を残す理由を確認してから関数を選ぶ読み方になります。この行動の変化は差分から確認できますが、作者がこの変更を行った具体的なきっかけは、短いコミットメッセージからは確認できません。</p>
+<p>4月のフォルダ再配置後も本文の中心は同じです。7月1日の<a href="https://github.com/mattpocock/skills/commit/7efc3d2a3899c141f4d64e11be2227e0049db626">整理</a>で misc が積極的に配布しない区分と明記され、固定コミットの<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/.out-of-scope/frozen-misc-skills.md#L1-L15">保守方針</a>では、作者が日常的に使わないスキル群として保守を凍結しています。これは変換関数の選択理由とは別の配布・保守の判断です。</p>
+</section>
+<section id="design">
+<h2>設計判断</h2>
+<h3 id="design-1">データ不足と意図的な型違いを分ける</h3>
+<p>テストで型を合わせたいという要求には、不要なプロパティを省略したい場合と、型の違う入力をわざと渡したい場合があります。確認できる選択肢は <code>fromPartial</code> と <code>fromAny</code>、さらに完全なオブジェクト用の <code>fromExact</code> です。スキルが示す判断基準はテストの入力意図で、単にコードが短くなる関数を選ぶものではありません。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/migrate-to-shoehorn/SKILL.md#L97-L110">関数の使い分け</a></p>
+<p><code>body.id</code> が文字列の例は <code>fromPartial</code>、数値を意図的に渡す例は <code>fromAny</code> に対応します。後者の数値を文字列へ「修正」すれば、不正入力を試すという例の目的が消えます。このため、要件質問は置換の前提を決める役割を持っています。これは本文の対応関係からの分析で、作者が検討した全代替案の履歴を意味しません。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/migrate-to-shoehorn/SKILL.md#L65-L95">2つの変換例</a></p>
+<h3 id="design-2">本番コードへ適用せず、型検査で終える</h3>
+<p>型アサーションを見つけた場所すべてへ適用するのではなく、スキルはテスト専用という境界を明示しています。検索例も test/spec の拡張子を対象にします。採用結果は、テストの入力構築を補助し、import を加えて型検査で確かめる流れです。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/migrate-to-shoehorn/SKILL.md#L12-L18">境界と検索・確認</a>・<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/migrate-to-shoehorn/SKILL.md#L112-L118">チェックリスト</a></p>
+<p>この検索式は本文が示す探索方法であり、すべての TypeScript のアサーションを網羅する構文解析器ではありません。またスキルにはテスト実行までを必須にする記載はなく、完了条件は型検査の指示までです。外部パッケージの関数が実際に受け入れる入力の全範囲や、移行前後の実行時挙動が一致するかは、今回の調査では確認していません。</p>
+</section>
+<section id="sources">
+<h2>調査範囲と出典</h2>
+<div class="table-wrap">
+<table>
+<thead><tr><th>項目</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td>元URL</td><td><a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/migrate-to-shoehorn/SKILL.md">migrate-to-shoehorn</a></td></tr>
+<tr><td>分析コミット</td><td><code>4ae2317ddb22b046e26455e4f9c9b3aaaf62212d</code></td></tr>
+<tr><td>調査日</td><td>2026-11-13</td></tr>
+<tr><td>実行検証</td><td>なし</td></tr>
+</tbody>
+</table>
+</div>
+<details class="report-details">
+<summary>詳しい調査記録を見る</summary>
+<div class="table-wrap">
+<table>
+<thead><tr><th>項目</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td>調査範囲</td><td>SKILL.md、agents/openai.yaml、misc/README、保守方針、plugin.json、link-skills.sh、package.json、固定ツリー一覧、移動前を含む本文履歴と2月4日の差分。Issue/PR索引全体を関連語で確認し、共通配布方針の Issue #164 と PR #1025 を確認しました。</td></tr>
+<tr><td>未確認の範囲</td><td>変更の具体的な契機。shoehorn の外部実装・ドキュメントは境界外。固定ツリー内に専用評価・fixture・実行結果、共有評価への参照は見つかりませんでした。直接関連する議論は索引の関連語検索では見つかりませんでした。</td></tr>
+</tbody>
+</table>
+</div>
+<p><a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/migrate-to-shoehorn/agents/openai.yaml#L1-L3">表示用メタデータ</a>は名前と説明だけで、変換ロジックを追加していません。<a href="https://github.com/mattpocock/skills/issues/164#issuecomment-4418682499">Issue #164 の作者回答</a>は、misc がプラグインに含まれないことを意図的だと確認しています。</p>
+</details>
+</section>
+</main>
+</div>
+<footer>Skill anatomy が生成した分析のHTML版。本文は同じフォルダのMarkdown版から補助CLIが生成したもので、完了記録はMarkdown版が持つ。</footer>
+</div>
+</body>
+</html>

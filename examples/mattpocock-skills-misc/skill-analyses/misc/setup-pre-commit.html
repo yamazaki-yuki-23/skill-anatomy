@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>setup-pre-commit の分析</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #fffdf7;
+  --grid: #d9d4c4;
+  --surface: #ffffff;
+  --ink: #2b2d42;
+  --text: #2b2d42;
+  --muted: #6b6f80;
+  --line: #e6e2d6;
+  --code-bg: #f4f1e8;
+  --yellow: #ffe066;
+  --pink: #ffa3bf;
+  --blue: #2457f5;
+  --mint: #8fe3d2;
+  --link: #1d4ed8;
+  --shadow-ink: #2b2d42;
+  --accent: #2457f5;
+  --accent-soft: #dfe7ff;
+  --surface-2: #f4f1e8;
+  --content: 44rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1d26;
+    --grid: #343647;
+    --surface: #262837;
+    --ink: #eceef5;
+    --text: #e6e8f0;
+    --muted: #a3a8ba;
+    --line: #3d4052;
+    --code-bg: #2f3243;
+    --link: #8fb6ff;
+    --shadow-ink: #0f1016;
+    --accent: #8fb6ff;
+    --accent-soft: #2d3a66;
+    --surface-2: #2f3243;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 1.5rem; }
+body {
+  margin: 0;
+  color: var(--text);
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--grid) 1.2px, transparent 1.3px);
+  background-size: 22px 22px;
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "BIZ UDPGothic", Meiryo, "Noto Sans JP", sans-serif;
+  font-size: 1rem;
+  line-height: 1.9;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3, h4, .eyebrow, .toc-title {
+  font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", Meiryo, "Noto Sans JP", sans-serif;
+  font-weight: 800;
+}
+a { color: var(--link); text-decoration-thickness: 2px; text-underline-offset: 0.2em; }
+code, pre, kbd { font-family: ui-monospace, "SFMono-Regular", Menlo, "BIZ UDGothic", Consolas, "Noto Sans Mono CJK JP", monospace; font-size: 0.92em; }
+code { background: var(--code-bg); padding: 0.1em 0.4em; border-radius: 6px; overflow-wrap: anywhere; }
+pre {
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+  box-shadow: 4px 4px 0 var(--shadow-ink);
+}
+pre code { background: none; padding: 0; font-size: 0.88rem; }
+.page { max-width: calc(var(--content) + 20rem); margin: 0 auto; padding: clamp(1rem, 3vw, 2.5rem) 16px 4rem; }
+.hero {
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 18px;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  margin-bottom: 2rem;
+  box-shadow: 8px 8px 0 var(--yellow);
+}
+.eyebrow {
+  display: table;
+  margin: 0 0 1rem;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 0.95rem;
+  padding: 0.15em 0.8em;
+  border-radius: 999px;
+  transform: none;
+}
+.hero h1 {
+  display: inline;
+  margin: 0;
+  font-size: clamp(1.9rem, 5vw, 3rem);
+  line-height: 1.3;
+  background: linear-gradient(transparent 58%, var(--yellow) 58%);
+  padding: 0 0.1em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+@media (prefers-color-scheme: dark) { .hero h1 { color: #fff; background: linear-gradient(transparent 58%, #8a6d00 58%); } }
+.lead { margin: 1.3rem 0 1.6rem; font-size: 1.08rem; max-width: 36rem; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0.8rem; margin: 0; }
+.facts div { border: 2px dashed var(--line); border-radius: 12px; padding: 0.6rem 0.9rem; background: var(--surface); }
+.facts dt { font-size: 0.78rem; color: var(--muted); font-weight: 700; }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.layout { display: grid; grid-template-columns: 1fr; gap: 1.6rem; align-items: start; }
+.toc {
+  background: #fff4c2;
+  color: #2b2d42;
+  padding: 1rem 1.1rem 1.2rem;
+  border-radius: 4px;
+  box-shadow: 3px 5px 10px rgba(43, 45, 66, 0.18);
+  transform: none;
+}
+.toc-title { margin: 0 0 0.4rem; font-size: 0.9rem; }
+.toc ol { margin: 0; padding-left: 1.3rem; line-height: 1.7; }
+.toc ol ol { list-style: none; padding-left: 0.8rem; margin: 0.1rem 0 0.4rem; font-size: 0.9rem; line-height: 1.55; }
+.toc ol ol li::before { content: "・"; color: #6b6f80; }
+.toc a { color: #2b2d42; text-decoration: none; border-bottom: 2px solid transparent; }
+.toc a:hover { border-bottom-color: #2b2d42; }
+main { min-width: 0; }
+section {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: clamp(1.2rem, 3vw, 2.2rem);
+  margin-bottom: 1.8rem;
+}
+h2 {
+  display: table;
+  margin: -2.4rem 0 1.2rem -0.4rem;
+  font-size: 1.3rem;
+  line-height: 1.3;
+  color: #2b2d42;
+  background: var(--sticker, var(--pink));
+  padding: 0.3em 0.9em;
+  border-radius: 8px;
+  transform: none;
+  box-shadow: 0 1px 3px rgba(43, 45, 66, 0.12);
+}
+h3 {
+  display: table;
+  margin: 1.8rem 0 0.6rem;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  background: linear-gradient(transparent 60%, var(--pink) 60%);
+  padding: 0 0.15em;
+}
+@media (prefers-color-scheme: dark) { h3 { background: linear-gradient(transparent 60%, #7a2d47 60%); } }
+h4 { margin: 1.4rem 0 0.4rem; font-size: 1rem; }
+p, ul, ol { margin: 0 0 1rem; }
+li { margin-bottom: 0.3rem; }
+p, li, td, dd, a { overflow-wrap: anywhere; }
+blockquote { margin: 0 0 1rem; padding: 0.3rem 0 0.3rem 1rem; border-left: 4px solid var(--line); color: var(--muted); }
+blockquote > :last-child { margin-bottom: 0; }
+table { width: 100%; border-collapse: collapse; margin: 0 0 1.2rem; font-size: 0.95rem; }
+.table-wrap { overflow-x: auto; margin: 0 0 1.2rem; }
+.table-wrap table { margin: 0; }
+th, td { padding: 0.6rem 0.8rem; text-align: left; vertical-align: top; border: 2px solid var(--ink); }
+thead th { background: var(--yellow); color: #2b2d42; font-weight: 800; }
+tbody th { white-space: nowrap; font-weight: 700; }
+td:first-child, th:first-child { min-width: 7rem; }
+.status { display: inline-block; padding: 0.05em 0.7em; border-radius: 999px; border: 2px solid var(--ink); font-size: 0.85em; font-weight: 700; }
+.note { background: var(--surface); border: 2px dashed var(--pink); border-radius: 12px; padding: 0.9rem 1.1rem; margin: 1.2rem 0; }
+.note > :last-child { margin-bottom: 0; }
+.figure { margin: 1.4rem 0; }
+.figure svg { display: block; max-width: 100%; height: auto; }
+.figure figcaption { margin-top: 0.5rem; font-size: 0.9rem; color: var(--muted); }
+.source { font-size: 0.88rem; color: var(--muted); }
+.sources-list { padding-left: 1.3rem; font-size: 0.95rem; }
+footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: center; }
+@media (min-width: 64rem) {
+  .layout { grid-template-columns: 15rem minmax(0, 1fr); }
+  .toc { position: sticky; top: 1.5rem; max-height: calc(100vh - 3rem); overflow-y: auto; }
+}
+@media print {
+  body { background: #fff; color: #000; }
+  .hero, section, pre { box-shadow: none; border-color: #444; }
+  .toc { display: none; }
+  .eyebrow, h2 { transform: none; box-shadow: none; }
+  a { color: inherit; }
+}
+#overview { --sticker: var(--pink); }
+#flow { --sticker: var(--blue); }
+#flow h2 { color: #fff; }
+#history { --sticker: var(--mint); }
+#design { --sticker: var(--ink); }
+#design h2 { color: var(--surface); }
+#sources { --sticker: var(--surface); }
+#sources h2 { color: var(--ink); border: 1px solid var(--line); }
+
+.report-details { margin: 1rem 0; border: 1px solid var(--line); border-radius: 8px; padding: 0.7rem 1rem; }
+.report-details summary { cursor: pointer; color: var(--link); font-weight: 600; }
+.report-details[open] summary { margin-bottom: 0.8rem; }
+.report-details summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+<header class="hero">
+  <p class="eyebrow">Skill anatomy</p>
+  <h1>setup-pre-commit の分析</h1>
+  <p class="lead">setup-pre-commit は、コミット前に整形・型検査・テストを呼ぶ仕組みを既存リポジトリへ設置するスキルです。整形はステージ済みファイルに絞り、型検査とテストは既存スクリプトを使うという、検査範囲の使い分けが中心です。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/setup-pre-commit/SKILL.md#L3-L13">役割</a>・<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/setup-pre-commit/SKILL.md#L87-L91">実行順序</a></p>
+  <dl class="facts">
+    <div><dt>元URL</dt><dd><a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/setup-pre-commit/SKILL.md">mattpocock/skills/skills/misc/setup-pre-commit</a></dd></div>
+    <div><dt>分析コミット</dt><dd><code>4ae2317ddb22</code></dd></div>
+    <div><dt>調査日</dt><dd>2026-11-13</dd></div>
+  </dl>
+</header>
+<div class="layout">
+<nav class="toc" aria-label="目次">
+  <p class="toc-title">目次</p>
+  <ol>
+<li><a href="#overview">概要と使い方</a></li>
+<li><a href="#flow">仕組みと処理の流れ</a></li>
+<li><a href="#history">作成・変更の経緯</a></li>
+<li><a href="#design">設計判断</a>
+<ol>
+<li><a href="#design-1">整形とプロジェクト全体の確認を分ける</a></li>
+<li><a href="#design-2">既存の設定と能力に合わせて構成する</a></li>
+<li><a href="#design-3">設置したフックを最後のコミットで通す</a></li>
+</ol>
+</li>
+<li><a href="#sources">調査範囲と出典</a></li>
+  </ol>
+</nav>
+<main>
+<section id="overview">
+<h2>概要と使い方</h2>
+<p>setup-pre-commit は、コミット前に整形・型検査・テストを呼ぶ仕組みを既存リポジトリへ設置するスキルです。整形はステージ済みファイルに絞り、型検査とテストは既存スクリプトを使うという、検査範囲の使い分けが中心です。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/setup-pre-commit/SKILL.md#L3-L13">役割</a>・<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/setup-pre-commit/SKILL.md#L87-L91">実行順序</a></p>
+<p>入力は現在のリポジトリのロックファイル、package.json の scripts、既存の Prettier 設定です。出力は Husky のフック、lint-staged の設定、必要なら Prettier の設定、および開発用依存の追加です。Husky は Git のフックを管理し、lint-staged はコミット対象としてステージしたファイルへ処理を絞り、Prettier は書式を整えます。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/setup-pre-commit/SKILL.md#L17-L55">依存導入とフック</a></p>
+<p>Node.js 系のパッケージ管理と Git を使うプロジェクトが前提です。本文は npm・pnpm・yarn・bun のロックファイルを挙げ、判別できない場合は npm を既定にしています。型検査とテストの仕組みを新規に作る指示ではなく、それらの script がなければフックから該当行を省く指示です。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/setup-pre-commit/SKILL.md#L17-L19">検出条件</a>・<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/setup-pre-commit/SKILL.md#L37-L47">適応条件</a></p>
+</section>
+<section id="flow">
+<h2>仕組みと処理の流れ</h2>
+<p>このスキルには設定例がありますが、特定の入力リポジトリから生成結果までを示した独立の利用例や実行記録はありません。以下は本文の工程順に沿った説明であり、架空のプロジェクトを作って結果を補ったものではありません。</p>
+<ol>
+<li>エージェントはロックファイルからパッケージマネージャーを選び、husky・lint-staged・prettier を開発用依存として追加します。</li>
+<li>Husky を初期化します。本文の説明では <code>.husky/</code> が作られ、package.json の prepare に <code>husky</code> が設定されます。</li>
+<li><code>.husky/pre-commit</code> に lint-staged、型検査、テストの順で呼び出しを書きます。存在しない script の行は省略し、そのことを利用者へ伝えます。</li>
+<li><code>.lintstagedrc</code> を作り、Prettier 設定がなければ既定の <code>.prettierrc</code> を作ります。</li>
+<li>ファイルの存在・実行権限・prepare 設定を確認し、lint-staged を実行します。その後、変更をステージしてコミットし、新しいフックが動く経路を通します。</li>
+</ol>
+<p>フックの掲載例は次の3行です。本文は npm の部分を検出したパッケージマネージャーに合わせるよう明記しています。</p>
+<pre><code class="language-text">npx lint-staged
+npm run typecheck
+npm run test</code></pre>
+<p>これはすべてのリポジトリへ無条件に3行を入れる仕様ではありません。既存の scripts を確かめて行を選ぶことが、設定の具体化に必要です。どの行を残すかはエージェントの判断で、コミット時の呼び出しは Husky に、整形対象の絞り込みは lint-staged に委ねます。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/setup-pre-commit/SKILL.md#L29-L47">フック例と分岐</a></p>
+<p>整形の設定例は <code>&quot;*&quot;: &quot;prettier --ignore-unknown --write&quot;</code> です。対象は lint-staged が受け取るステージ済みファイルで、未知の形式は Prettier のオプションで飛ばす説明になっています。型検査とテストは、そのファイル一覧へ限定する指定がなく、プロジェクトの script を呼びます。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/setup-pre-commit/SKILL.md#L49-L55">整形設定</a>・<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/setup-pre-commit/SKILL.md#L89-L91">補足</a></p>
+<p>確認項目は、フックの存在と実行可能性、lint-staged 設定の存在、prepare の値、Prettier 設定、lint-staged の実行です。最後のコミットは、それらを Git から呼ぶ経路の smoke test、つまり接続の簡易確認として説明されています。本文のチェックリストと実行成功の記録は別で、固定コミットにこのスキル専用の自動評価はありません。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/setup-pre-commit/SKILL.md#L73-L85">確認とコミット</a></p>
+</section>
+<section id="history">
+<h2>作成・変更の経緯</h2>
+<p><a href="https://github.com/mattpocock/skills/commit/4458b65ffca31dc80f975a179a4e9cfe43e1fa49">2026年2月10日の初出</a>に、すでに現在の主要な工程があります。ロックファイル検出、既存 script がなければ省略する条件、既存 Prettier 設定を保つ条件、最後にコミットする指示も初出から確認できます。後続のフォルダ移動と表記変更を、これらの動作の追加とは扱いません。</p>
+<p>変更案の経緯は <a href="https://github.com/mattpocock/skills/issues/14">Issue #14</a>で確認できます。報告者は Bun のロックファイル名に疑問を示し、議論では <code>bun.lock</code> と <code>bun.lockb</code> の両方を認識する案が出ています。<a href="https://github.com/mattpocock/skills/pull/60">PR #60</a>も両方を列挙する1行の差分を提示しましたが、未マージで閉じられています。固定コミットの検出説明は <code>bun.lockb</code> のままです。</p>
+<p>作者アカウントの<a href="https://github.com/mattpocock/skills/issues/14#issuecomment-4337979812">Issue #14 への回答</a>は AI 生成のトリアージ文と明示され、現代の Bun の名前について報告を認めつつ、優先度が高いスキルではないため wontfix と説明しています。これは対象の動作を変える修正ではなく、修正を取り込まない保守判断です。</p>
+<p>その後の<a href="https://github.com/mattpocock/skills/commit/7efc3d2a3899c141f4d64e11be2227e0049db626">7月1日の整理</a>と固定コミットの<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/.out-of-scope/frozen-misc-skills.md#L1-L15">凍結方針</a>では、misc を日常利用せず、通常の配布・保守の対象にしないことが明文化されています。初期のツール選定理由は、これらの後年の説明から補いません。</p>
+</section>
+<section id="design">
+<h2>設計判断</h2>
+<h3 id="design-1">整形とプロジェクト全体の確認を分ける</h3>
+<p>コミット前に何をどの範囲で確認するかに対して、採用された構成は「ステージ済みファイルの整形を先に、型検査とテストを後に」です。本文自身が、前段を速く対象を絞った処理、後段を全体の検査として説明しています。これは作者が記した順序の理由であり、所要時間を実測した主張ではありません。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/setup-pre-commit/SKILL.md#L87-L91">順序の説明</a></p>
+<p>判断基準は処理の対象範囲です。整形では変更に含めるファイルを扱い、型検査とテストでは package.json にあるプロジェクト側のコマンドを使います。対象リポジトリの script が内部でさらに範囲を絞る可能性までは、このスキルから決まりません。すべてをステージ済みに限定する案や全ファイルを整形する案を作者が比較した記録も未確認です。</p>
+<h3 id="design-2">既存の設定と能力に合わせて構成する</h3>
+<p>既存の書式規則を変える必要がない場合に設定を増やさないよう、Prettier 設定は存在しないときだけ作成します。既定値はタブを使わず幅2、printWidth 80などですが、既存設定を置き換える基準ではありません。採用する選択は「既存設定を使う」か「存在しない場合に既定を作る」かで、判断材料は設定の有無です。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/setup-pre-commit/SKILL.md#L57-L71">Prettier の条件</a></p>
+<p>同様に、typecheck と test は script がある場合だけ呼び、なければ省略して利用者へ伝えます。これにより、設定されたフックの内容はプロジェクトごとに異なります。スキルは不足する検査を新規実装せず、何が省かれたかを報告する構成です。この効果は指示から読み取れますが、作者がこの適応条件を採用した当時の具体的な失敗例は確認できません。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/setup-pre-commit/SKILL.md#L47-L47">適応条件</a></p>
+<h3 id="design-3">設置したフックを最後のコミットで通す</h3>
+<p>設定ファイルの存在だけでは、Git のコミットから呼び出される経路は確かまりません。本文は lint-staged の単独実行と最後のコミットを分け、後者を新しいフックの簡易確認として位置づけます。形式の確認から接続の確認へ進む構成と読めます。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/setup-pre-commit/SKILL.md#L73-L85">検証の終点</a></p>
+<p>ただし、テスト用の入力 fixture や期待出力を比較する採点処理はありません。コミットが通ることと、対象プロジェクトのテストが網羅的であることは別です。また実際に何を検査するかは存在する script に依存します。今回はスキルのインストールやコミットを行っておらず、この接続の実測結果はありません。</p>
+</section>
+<section id="sources">
+<h2>調査範囲と出典</h2>
+<div class="table-wrap">
+<table>
+<thead><tr><th>項目</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td>元URL</td><td><a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/setup-pre-commit/SKILL.md">setup-pre-commit</a></td></tr>
+<tr><td>分析コミット</td><td><code>4ae2317ddb22b046e26455e4f9c9b3aaaf62212d</code></td></tr>
+<tr><td>調査日</td><td>2026-11-13</td></tr>
+<tr><td>実行検証</td><td>なし</td></tr>
+</tbody>
+</table>
+</div>
+<details class="report-details">
+<summary>詳しい調査記録を見る</summary>
+<div class="table-wrap">
+<table>
+<thead><tr><th>項目</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td>調査範囲</td><td>本文、agents/openai.yaml、misc/README、凍結方針、plugin.json、link-skills.sh、package.json、固定ツリー一覧、移動前を含む本文履歴と初出差分。Issue/PR索引全体の関連語確認、Issue #14・#164、PR #60・#1025 の本文・コメント・該当するレビューと変更ファイル。</td></tr>
+<tr><td>未確認の範囲</td><td>初期のツール選定・既存設定保持条件の具体的な動機。独立した利用入力例はなく、本文の順序を追いました。固定ツリーに専用 tests/evals/fixtures・実行記録、共有評価への参照はありません。Husky等の外部実装は調査境界外です。</td></tr>
+</tbody>
+</table>
+</div>
+<p><a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc/setup-pre-commit/agents/openai.yaml#L1-L3">表示用メタデータ</a>は名前と短い説明です。<a href="https://github.com/mattpocock/skills/blob/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/.claude-plugin/plugin.json#L25-L55">プラグイン定義</a>にはこのスキルを含む misc の登録がなく、表示用ファイルの存在と通常配布の有無は別です。</p>
+</details>
+</section>
+</main>
+</div>
+<footer>Skill anatomy が生成した分析のHTML版。本文は同じフォルダのMarkdown版から補助CLIが生成したもので、完了記録はMarkdown版が持つ。</footer>
+</div>
+</body>
+</html>

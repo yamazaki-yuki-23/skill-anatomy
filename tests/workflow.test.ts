@@ -191,7 +191,7 @@ test('distributed Node CLI preserves the approval gate and records completed rep
   const completedResult = JSON.parse(completed.stdout);
   assert.equal(completedResult.done, 1);
   assert.equal(completedResult.report_bytes, Buffer.byteLength('# 分析済み\n', 'utf8'));
-  assert.equal(completedResult.warnings, undefined);
+  assert.ok((completedResult.warnings ?? []).every((w: string) => /分量|バイトに満たない/.test(w)));
   assert.equal(
     required(readJson<State>(prepared.plan.state_file).skills[entry.skill]).status,
     'done',
@@ -208,14 +208,31 @@ test('complete reports the size of an oversized skill analysis with a warning', 
     'report_bytes': number;
     warnings?: string[];
   };
-  assert.ok(result.report_bytes > 20000);
+  assert.ok(result.report_bytes > 24000);
   assert.equal(result.warnings?.length, 1);
-  assert.match(required(result.warnings?.[0]), /分量の目安/);
+  assert.match(required(result.warnings?.[0]), /個別分析が分量の範囲.*を超えています/);
+  writeFileSync(
+    entry.report,
+    `# 短い分析\n\n## 概要と使い方\n\n短い。\n\n## 設計判断\n\n${'理由。'.repeat(300)}\n`,
+  );
+  const short = complete(prepared.planFile, entry.skill) as { warnings?: string[] };
+  assert.ok(short.warnings?.some((w) => /個別分析が分量の範囲.*より少ない/.test(w)));
+  assert.ok(short.warnings?.some((w) => /章「概要と使い方」の本文が40バイトに満たない/.test(w)));
+  assert.ok(!short.warnings?.some((w) => /章「設計判断」/.test(w)));
+  writeFileSync(
+    entry.report,
+    `# 引用\n\n## 概要と使い方\n\n${'本文。'.repeat(600)}\n\n\`\`\`md\n## 入力の見出し\n\`\`\`\n\n## 設計判断\n\n${'理由。'.repeat(600)}\n`,
+  );
+  const quoted = complete(prepared.planFile, entry.skill) as { warnings?: string[] };
+  assert.ok(!quoted.warnings?.some((w) => /章「入力の見出し」/.test(w)));
   const repositoryReport = path.join(prepared.plan.destination, 'repository-analysis.md');
   for (const other of prepared.plan.skills.slice(1)) f.finish(prepared, other.skill);
-  writeFileSync(repositoryReport, `# 全体\n${'説明。'.repeat(8000)}\n`);
+  writeFileSync(repositoryReport, `# 全体\n\n## 概要\n\n${'説明。'.repeat(1000)}\n`);
   const repository = complete(prepared.planFile, undefined, true) as { warnings?: string[] };
   assert.equal(repository.warnings, undefined);
+  writeFileSync(repositoryReport, `# 全体\n\n## 概要\n\n${'説明。'.repeat(8000)}\n`);
+  const long = complete(prepared.planFile, undefined, true) as { warnings?: string[] };
+  assert.ok(long.warnings?.some((w) => /全体分析が分量の範囲.*を超えています/.test(w)));
 });
 
 test('repository, tree, blob, slash branch and commit URLs', () => {
@@ -798,8 +815,9 @@ test('complete writes an HTML version beside each report and status reports it',
       `href="https://github.com/alice/agent-skills/blob/${prepared.plan.commit}/skills/review/SKILL.md"`,
     ),
   );
-  assert.equal(result.warnings?.length, 1);
-  assert.match(required(result.warnings?.[0]), /HTML版で扱えない記法.*生のHTML/);
+  const htmlWarnings = (result.warnings ?? []).filter((w) => w.startsWith('HTML版'));
+  assert.equal(htmlWarnings.length, 1);
+  assert.match(required(htmlWarnings[0]), /HTML版で扱えない記法.*生のHTML/);
   assert.equal(status(prepared.planFile).skills[0]?.html.status, 'valid');
   for (const other of prepared.plan.skills.slice(1)) f.finish(prepared, other.skill);
   const overview = path.join(prepared.plan.destination, 'repository-analysis.md');
@@ -811,7 +829,7 @@ test('complete writes an HTML version beside each report and status reports it',
     html: string;
     warnings?: string[];
   };
-  assert.equal(repository.warnings, undefined);
+  assert.ok((repository.warnings ?? []).every((w) => /分量|バイトに満たない/.test(w)));
   const overviewHtml = readFileSync(repository.html, 'utf8');
   assert.deepEqual(inspectHtml(overviewHtml), []);
   assert.match(overviewHtml, /<dd>完了 3 \/ 未完了 0<\/dd>/);
@@ -846,7 +864,7 @@ test(
     };
     assert.equal(outside.html, null);
     assert.match(
-      required(outside.warnings?.[0]),
+      required(outside.warnings?.find((w) => w.startsWith('HTML版'))),
       /HTML版を生成できませんでした.*通常ファイルではありません/,
     );
     assert.equal(readFileSync(sentinel, 'utf8'), 'keep\n');
@@ -872,7 +890,10 @@ test(
     // may land beside it under another name; the shared inode is never overwritten.
     assert.notEqual(hard.html, entry.html);
     if (hard.html === null)
-      assert.match(required(hard.warnings?.[0]), /通常ファイルではありません/);
+      assert.match(
+        required(hard.warnings?.find((w) => w.startsWith('HTML版'))),
+        /通常ファイルではありません/,
+      );
     for (const file of [entry.report, entry.html])
       assert.equal(readFileSync(file, 'utf8'), '# review の分析\n\n## 概要と使い方\n\n本文。\n');
     if (hard.html !== null) unlinkSync(hard.html);

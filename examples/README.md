@@ -1,9 +1,10 @@
 # 作例
 
-Skill anatomyが生成したレポートと、承認済みの見本です。どのレポートも対象スキルを実行せずに調べています。
+Skill anatomyが生成したレポートです。どのレポートも対象スキルを実行せずに調べています。実モデル評価の2題材と同じ対象で、分量の範囲と評価の比較対象を兼ねます。本文は生成結果のままで、手直ししていません。HTML版は `complete` がMarkdownから生成したものです。
 
-| 作例 | 対象と調査日 | 位置づけ |
+| 作例 | 対象と調査日 | 生成条件 |
 | --- | --- | --- |
-| [yomiyasu の分析](yomiyasu/skill-analyses/yomiyasu.md)、[全体分析](yomiyasu/repository-analysis.md)（それぞれ隣にHTML版） | [nanaism/yomiyasu コミット `29d67cc`](https://github.com/nanaism/yomiyasu/tree/29d67ccb05e370b5958d72920a9cd1aa829dee80)、2026年11月1日 | 現在の文章とHTML表示の基準になった承認済みの見本 |
-| [Skill anatomy 自身の分析](skill-anatomy.md)、[HTML版](skill-anatomy.html) | [コミット `61d695d`](https://github.com/yamazaki-yuki-23/skill-anatomy/tree/61d695d94dba7fcd5824f113b85ff07e114220e8)、2026年10月28日 | このスキルで生成。本文は生成結果で、レビュー後に出典の行番号3件だけを補正。HTML版はスキルのHTML版の手順でMarkdown版から書き起こした |
-| [grill-me の分析](grill-me.md) | [mattpocock/skills の grill-me](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me)、2026年10月22日 | 過去の形式の例として残し、再生成していない |
+| [total-recall の分析](total-recall/skill-analyses/root.md)、[全体分析](total-recall/repository-analysis.md)（それぞれ隣にHTML版） | [gavdalf/total-recall コミット `437ab36`](https://github.com/gavdalf/total-recall/tree/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f)、2026年11月13日 | 1スキルのリポジトリ。実モデル評価 `single`（Codex CLI 0.167.0、既定モデル）の出力。記録 `.cache/issue-work/single-1794533488048` |
+| [git-guardrails-claude-code](mattpocock-skills-misc/skill-analyses/misc/git-guardrails-claude-code.md)、[migrate-to-shoehorn](mattpocock-skills-misc/skill-analyses/misc/migrate-to-shoehorn.md)、[scaffold-exercises](mattpocock-skills-misc/skill-analyses/misc/scaffold-exercises.md)、[setup-pre-commit](mattpocock-skills-misc/skill-analyses/misc/setup-pre-commit.md)、[全体分析](mattpocock-skills-misc/repository-analysis.md)（それぞれ隣にHTML版） | [mattpocock/skills の `skills/misc` コミット `4ae2317`](https://github.com/mattpocock/skills/tree/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d/skills/misc)、2026年11月13日 | 4スキルのフォルダ。実モデル評価 `multi` の出力。記録 `.cache/issue-work/multi-1794533788929` |
+
+分量の範囲（個別分析 5,000〜24,000バイト、全体分析 1,500〜12,000バイト）はこの2組から決めた。各レポートの採点は該当PR（#93）に記録している。生成結果の誤記（setup-pre-commit の「確かまりません」）も直さず残している。
