@@ -33,7 +33,7 @@ function main(args) {
     return;
   }
   if (["-V", "--version"].includes(command)) {
-    console.log("0.8.0");
+    console.log("0.9.0");
     return;
   }
   if (!["prepare", "approve", "status", "complete", "discussion"].includes(command))
