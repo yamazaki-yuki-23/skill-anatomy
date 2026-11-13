@@ -17,7 +17,7 @@ Skill anatomyは、GitHub上のAIエージェント向けスキルを調べ、�
 | `src/source.ts` | 固定コミットのファイル展開と索引 |
 | `src/hash.ts`、`src/state.ts` | ハッシュ、承認と完了記録 |
 | `src/storage.ts`、`src/workspace.ts` | 保存処理と保存先の検証 |
-| `src/html.ts` | HTML版の保存先と安全条件の検査 |
+| `src/markdown.ts`、`src/render.ts`、`src/templates.ts`、`src/html.ts` | Markdownの部分集合の変換、HTML版の組み立て、テンプレートの所在、安全条件の検査 |
 | `src/cli.ts`、`src/types.ts` | CLIの実装、共有型定義 |
 | `skills/skill-anatomy/` | 公開スキル。`SKILL.md`、`references/`、`assets/templates/`、`agents/openai.yaml`、コンパイル済みの`dist/`（Gitで管理し、インストール先ではビルド不要） |
 | `scripts/anatomy`、`scripts/harness/` | CLIの起動スクリプト、構成検査・検証記録・Codexレビュー・リリース準備・実モデル評価 |

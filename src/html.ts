@@ -1,8 +1,3 @@
-import type { ReportFormat } from './types.js';
-export const REPORT_FORMATS: readonly ReportFormat[] = ['markdown', 'html'];
-export function isReportFormat(value: unknown): value is ReportFormat {
-  return typeof value === 'string' && (REPORT_FORMATS as readonly string[]).includes(value);
-}
 export function htmlPath(report: string): string {
   return report.endsWith('.md') ? `${report.slice(0, -3)}.html` : `${report}.html`;
 }

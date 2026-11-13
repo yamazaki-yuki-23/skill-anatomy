@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { test } from 'vitest';
-import { htmlPath, inspectHtml, isReportFormat } from '../src/html.ts';
+import { htmlPath, inspectHtml } from '../src/html.ts';
 
 const page = (body: string, head = '<meta charset="utf-8">') =>
   `<!doctype html>\n<html lang="ja"><head>${head}<title>t</title></head><body>${body}</body></html>\n`;
@@ -11,8 +11,6 @@ test('HTML paths sit beside the Markdown report', () => {
   assert.equal(htmlPath('skill-analyses/review.md'), 'skill-analyses/review.html');
   assert.equal(htmlPath('skill-analyses/a--0123.md'), 'skill-analyses/a--0123.html');
   assert.equal(htmlPath('repository-analysis'), 'repository-analysis.html');
-  assert.ok(isReportFormat('html') && isReportFormat('markdown'));
-  assert.ok(!isReportFormat('pdf') && !isReportFormat(undefined));
 });
 
 test('published HTML templates satisfy the safety conditions', () => {
@@ -26,9 +24,8 @@ test('published HTML templates satisfy the safety conditions', () => {
     assert.deepEqual(inspectHtml(template), [], name);
     assert.match(template, /<style>/);
     assert.match(template, /prefers-color-scheme: dark/);
-    assert.match(template, /調査範囲と出典/);
-    assert.match(template, /<details class="report-details">/);
-    assert.match(template, /<summary>詳しい調査記録を見る<\/summary>/);
+    assert.match(template, /\{\{sections\}\}/);
+    assert.match(template, /\.report-details/);
     assert.match(template, /#fff4c2/);
     assert.doesNotMatch(template, /rotate\(/);
   }

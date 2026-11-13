@@ -4,8 +4,10 @@ import { spawnSync } from 'node:child_process';
 import {
   chmodSync,
   existsSync,
+  linkSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   renameSync,
   rmSync,
@@ -17,7 +19,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { test, onTestFinished } from 'vitest';
-import { approve, checkHtml, complete, status } from '../src/state.ts';
+import { approve, complete, status } from '../src/state.ts';
+import { inspectHtml } from '../src/html.ts';
 import { discover, reportPaths } from '../src/skills.ts';
 import { inside, readJson, withStateLock } from '../src/storage.ts';
 import { parseUrl, resolveTarget } from '../src/repository.ts';
@@ -35,7 +38,6 @@ interface Prepared {
     'selected_skills': number;
     'total_skills': number;
     'index_status': string;
-    format?: string;
     warning: string | null;
   };
   plan: Plan;
@@ -761,118 +763,6 @@ test('failed local ref inventory falls back without accepting an invalid reposit
   assert.equal(calls.length, 10, calls.join('\n'));
 });
 
-test('the default plan keeps Markdown output and reports absent HTML without changing records', () => {
-  const f = new Fixture();
-  const prepared = f.finishAll();
-  assert.equal(prepared.plan.format, 'markdown');
-  assert.equal(prepared.result.format, 'markdown');
-  for (const entry of prepared.plan.skills) {
-    assert.ok(entry.report.endsWith('.md'));
-    assert.equal(entry.html, `${entry.report.slice(0, -3)}.html`);
-  }
-  writeFileSync(path.join(prepared.plan.destination, 'repository-analysis.md'), '# 全体分析\n');
-  complete(prepared.planFile, undefined, true);
-  const before = status(prepared.planFile);
-  assert.equal(before.format, 'markdown');
-  assert.ok(before.skills.every((entry) => entry.html.status === 'missing'));
-  assert.equal(before.repository.html.status, 'missing');
-  assert.equal(before.repository.html.report, `${before.repository.report.slice(0, -3)}.html`);
-  const stateBefore = readFileSync(prepared.plan.state_file, 'utf8');
-  const entry = required(prepared.plan.skills[0]);
-  writeFileSync(
-    entry.html,
-    '<!doctype html><html><head><meta charset="utf-8"></head><body>x</body></html>',
-  );
-  const after = status(prepared.planFile);
-  assert.equal(after.skills[0]?.html.status, 'valid');
-  assert.equal(after.done, before.done);
-  assert.equal(after.repository.status, 'done');
-  assert.equal(readFileSync(prepared.plan.state_file, 'utf8'), stateBefore);
-});
-
-test('HTML format is recorded in the plan and checked beside each report', () => {
-  const f = new Fixture();
-  const options = {
-    url: 'https://github.com/Alice/Agent-Skills',
-    workspace: f.root,
-    noConfirm: true,
-    format: 'html' as const,
-  };
-  const result = prepareSnapshot(
-    options,
-    parseUrl(options.url),
-    f.root,
-    path.join(f.source, '.git'),
-    'refs/heads/main',
-    f.index,
-  );
-  assert.equal(result.format, 'html');
-  const planFile = result.plan_file as string;
-  const plan = readJson<Plan>(planFile);
-  assert.equal(plan.format, 'html');
-  const skill = 'skills/review/SKILL.md';
-  const entry = required(plan.skills.find((e) => e.skill === skill));
-  assert.throws(() => checkHtml(planFile, skill), /HTML版を先に保存/);
-  assert.throws(() => checkHtml(planFile, 'skills/none/SKILL.md'), /分析対象ではない/);
-  mkdirSync(path.dirname(entry.html), { recursive: true });
-  writeFileSync(
-    entry.html,
-    '<!doctype html><html><head><meta charset="utf-8"></head><body><script>x</script></body></html>',
-  );
-  assert.throws(() => checkHtml(planFile, skill), /<script>/);
-  assert.equal(status(planFile).skills.find((e) => e.skill === skill)?.html.status, 'invalid');
-  writeFileSync(
-    entry.html,
-    '<!doctype html><html><head><meta charset="utf-8"></head><body><a href="https://github.com/Alice/Agent-Skills">ok</a></body></html>',
-  );
-  assert.deepEqual(checkHtml(planFile, skill), { checked: entry.html, valid: true });
-  assert.equal(status(planFile).format, 'html');
-  assert.equal(status(planFile).skills.find((e) => e.skill === skill)?.html.status, 'valid');
-  const overview = path.join(plan.destination, 'repository-analysis.html');
-  assert.throws(() => checkHtml(planFile, undefined, true), /HTML版を先に保存/);
-  writeFileSync(
-    overview,
-    '<!doctype html><html><head><meta charset="utf-8"></head><body>全体</body></html>',
-  );
-  assert.deepEqual(checkHtml(planFile, undefined, true), { checked: overview, valid: true });
-  assert.equal(status(planFile).repository.html.status, 'valid');
-  assert.equal(status(planFile).done, 0);
-});
-
-test('the distributed CLI accepts --format html and rejects unknown formats and bad HTML', () => {
-  const f = new Fixture();
-  const invoke = (...args: string[]) =>
-    spawnSync(nodeExecutable, [cli, ...args], { encoding: 'utf8' });
-  const rejected = invoke('prepare', 'https://github.com/Alice/Agent-Skills', '--format', 'pdf');
-  assert.equal(rejected.status, 1);
-  assert.match(rejected.stderr, /対応していない形式/);
-  const prepared = f.prepare('', true);
-  const entry = required(prepared.plan.skills[0]);
-  assert.equal(invoke('check-html', prepared.planFile).status, 1);
-  assert.equal(invoke('check-html', prepared.planFile, '--skill', 'x', '--repository').status, 1);
-  assert.equal(
-    invoke('check-html', prepared.planFile, '--skill', entry.skill, '--extra', 'x').status,
-    1,
-  );
-  mkdirSync(path.dirname(entry.html), { recursive: true });
-  writeFileSync(
-    entry.html,
-    '<!doctype html><html><head><meta charset="utf-8"></head><body onload="x()"></body></html>',
-  );
-  const invalid = invoke('check-html', prepared.planFile, '--skill', entry.skill);
-  assert.equal(invalid.status, 1);
-  assert.match(invalid.stderr, /onload/);
-  writeFileSync(
-    entry.html,
-    '<!doctype html><html><head><meta charset="utf-8"></head><body>ok</body></html>',
-  );
-  const valid = invoke('check-html', prepared.planFile, '--skill', entry.skill);
-  assert.equal(valid.status, 0, valid.stderr);
-  assert.equal(JSON.parse(valid.stdout).valid, true);
-  const progress = invoke('status', prepared.planFile);
-  assert.equal(JSON.parse(progress.stdout).skills[0].html.status, 'valid');
-});
-
 test('HTML siblings cannot collide with other report directories', () => {
   const mapping = reportPaths(['skills/foo/SKILL.md', 'skills/foo.html/bar/SKILL.md']);
   const paths = Object.values(mapping).map((report) => report.toLowerCase());
@@ -883,3 +773,125 @@ test('HTML siblings cannot collide with other report directories', () => {
       `${sibling} collides with ${paths.join(', ')}`,
     );
 });
+
+test('complete writes an HTML version beside each report and status reports it', () => {
+  const f = new Fixture();
+  const prepared = f.prepare('', true);
+  const entry = required(prepared.plan.skills[0]);
+  assert.equal(entry.html, `${entry.report.slice(0, -3)}.html`);
+  mkdirSync(path.dirname(entry.report), { recursive: true });
+  writeFileSync(
+    entry.report,
+    '# review の分析\n\n## 概要と使い方\n\n課題は **確認** の順序です。\n\n## 設計判断\n\n### 先に質問する\n\n理由を先に書く。<b>raw</b>\n',
+  );
+  const result = complete(prepared.planFile, entry.skill) as { html: string; warnings?: string[] };
+  assert.equal(result.html, entry.html);
+  const html = readFileSync(entry.html, 'utf8');
+  assert.deepEqual(inspectHtml(html), []);
+  assert.match(html, /<title>review の分析<\/title>/);
+  assert.match(html, /<p class="lead">課題は <strong>確認<\/strong> の順序です。<\/p>/);
+  assert.match(html, /<h3 id="design-1">先に質問する<\/h3>/);
+  assert.match(html, /&lt;b&gt;raw&lt;\/b&gt;/);
+  assert.match(
+    html,
+    new RegExp(
+      `href="https://github.com/alice/agent-skills/blob/${prepared.plan.commit}/skills/review/SKILL.md"`,
+    ),
+  );
+  assert.equal(result.warnings?.length, 1);
+  assert.match(required(result.warnings?.[0]), /HTML版で扱えない記法.*生のHTML/);
+  assert.equal(status(prepared.planFile).skills[0]?.html.status, 'valid');
+  for (const other of prepared.plan.skills.slice(1)) f.finish(prepared, other.skill);
+  const overview = path.join(prepared.plan.destination, 'repository-analysis.md');
+  writeFileSync(
+    overview,
+    '# 全体分析\n\n## 概要\n\n3つのスキル。\n\n分析状況：完了 3 / 未完了 0。\n',
+  );
+  const repository = complete(prepared.planFile, undefined, true) as {
+    html: string;
+    warnings?: string[];
+  };
+  assert.equal(repository.warnings, undefined);
+  const overviewHtml = readFileSync(repository.html, 'utf8');
+  assert.deepEqual(inspectHtml(overviewHtml), []);
+  assert.match(overviewHtml, /<dd>完了 3 \/ 未完了 0<\/dd>/);
+  assert.equal(status(prepared.planFile).repository.html.status, 'valid');
+  const invoke = (...args: string[]) =>
+    spawnSync(nodeExecutable, [cli, ...args], { encoding: 'utf8' });
+  assert.equal(invoke('check-html', prepared.planFile, '--repository').status, 1);
+  assert.equal(
+    invoke('prepare', 'https://github.com/Alice/Agent-Skills', '--format', 'html').status,
+    1,
+  );
+  const progress = invoke('status', prepared.planFile);
+  assert.equal(progress.status, 0, progress.stderr);
+  assert.equal(JSON.parse(progress.stdout).format, undefined);
+});
+
+test(
+  'a symlink planted at the HTML path is never followed by complete',
+  { skip: process.platform === 'win32' },
+  () => {
+    const f = new Fixture();
+    const prepared = f.prepare('', true);
+    const entry = required(prepared.plan.skills[0]);
+    mkdirSync(path.dirname(entry.report), { recursive: true });
+    writeFileSync(entry.report, '# review の分析\n\n## 概要と使い方\n\n本文。\n');
+    const sentinel = path.join(f.base, 'sentinel.html');
+    writeFileSync(sentinel, 'keep\n');
+    symlinkSync(sentinel, entry.html);
+    const outside = complete(prepared.planFile, entry.skill) as {
+      html: string | null;
+      warnings?: string[];
+    };
+    assert.equal(outside.html, null);
+    assert.match(
+      required(outside.warnings?.[0]),
+      /HTML版を生成できませんでした.*通常ファイルではありません/,
+    );
+    assert.equal(readFileSync(sentinel, 'utf8'), 'keep\n');
+    assert.equal(
+      required(readJson<State>(prepared.plan.state_file).skills[entry.skill]).status,
+      'done',
+    );
+    unlinkSync(entry.html);
+    symlinkSync(entry.report, entry.html);
+    const inward = complete(prepared.planFile, entry.skill) as { html: string | null };
+    assert.equal(inward.html, null);
+    assert.equal(
+      readFileSync(entry.report, 'utf8'),
+      '# review の分析\n\n## 概要と使い方\n\n本文。\n',
+    );
+    unlinkSync(entry.html);
+    linkSync(entry.report, entry.html);
+    const hard = complete(prepared.planFile, entry.skill) as {
+      html: string | null;
+      warnings?: string[];
+    };
+    // macOS may resolve the hard-linked report through its other name, so the HTML
+    // may land beside it under another name; the shared inode is never overwritten.
+    assert.notEqual(hard.html, entry.html);
+    if (hard.html === null)
+      assert.match(required(hard.warnings?.[0]), /通常ファイルではありません/);
+    for (const file of [entry.report, entry.html])
+      assert.equal(readFileSync(file, 'utf8'), '# review の分析\n\n## 概要と使い方\n\n本文。\n');
+    if (hard.html !== null) unlinkSync(hard.html);
+    unlinkSync(entry.html);
+    const clean = complete(prepared.planFile, entry.skill) as { html: string | null };
+    assert.equal(clean.html, entry.html);
+    assert.ok(readFileSync(entry.html, 'utf8').startsWith('<!doctype html>'));
+    assert.equal(
+      readFileSync(entry.report, 'utf8'),
+      '# review の分析\n\n## 概要と使い方\n\n本文。\n',
+    );
+    const stale = `${entry.html}.${process.pid}-stale.tmp`;
+    writeFileSync(stale, 'stale\n');
+    complete(prepared.planFile, entry.skill);
+    assert.equal(readFileSync(stale, 'utf8'), 'stale\n');
+    unlinkSync(stale);
+    assert.deepEqual(
+      readdirSync(path.dirname(entry.html)).filter((name) => name.endsWith('.tmp')),
+      [],
+    );
+  },
+);

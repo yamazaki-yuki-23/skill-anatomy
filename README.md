@@ -26,7 +26,7 @@ Requires Node.js 22 or later and Git. To include pull requests and issues, also 
 
 3. Check the proposed research scope and output location, then reply "OK". The agent saves a report for each skill as it works, then a report on the repository as a whole, under `reports/` in the output location it proposed (by default the directory you run the analysis in; see [Saved files](#saved-files)).
 
-The URL decides the scope: a whole repository, one skill, a folder of skills, or a `SKILL.md` file. To read the report in a browser as well, add "output HTML as well" and a `.html` file with the same content is saved beside each Markdown report. Update later with `npx skills update skill-anatomy` or `gh skill update skill-anatomy`.
+The URL decides the scope: a whole repository, one skill, a folder of skills, or a `SKILL.md` file. An `.html` file with the same content is saved beside each Markdown report for reading in a browser. Update later with `npx skills update skill-anatomy` or `gh skill update skill-anatomy`.
 
 ## What you get
 
@@ -43,9 +43,9 @@ You can add a question alongside the URL, such as "explain how responsibilities 
 ```text
 reports/<owner>/<repository>/
 ├── repository-analysis.md      # Report on the repository as a whole
-├── repository-analysis.html    # Its HTML version (when requested)
+├── repository-analysis.html    # Its HTML version
 ├── skill-analyses/<path>.md     # Report on each skill
-├── skill-analyses/<path>.html   # Its HTML version (when requested)
+├── skill-analyses/<path>.html   # Its HTML version
 └── .state.json                 # Record of completed reports
 ```
 
@@ -62,12 +62,11 @@ Pass the same URL again to research the selected scope again from the current co
 | Option | Behavior |
 |---|---|
 | `--no-confirm` | Skip research-plan confirmation for this run. Tool permission prompts still apply. |
-| `--format html` | Also save an HTML version with the same content beside each Markdown report. |
 
 <details>
 <summary>Using the CLI directly, locks, and cleanup</summary>
 
-The agent drives `node skills/skill-anatomy/dist/cli.js` (`--help` lists the commands). `prepare URL` pins the commit, expands its files into `.cache/sources/<owner>/<repo>/<commit>/` with an index of paths, byte counts and line counts, fetches the issue index, and returns the PLAN; `prepare URL --workspace PATH` overrides the output location for one run. `approve PLAN` records your OK. `status PLAN` shows each skill's `pending` / `done` state, the repository state, and each HTML version's presence and check result. `complete PLAN --skill PATH` or `--repository` records completion and returns `report_bytes`, with `warnings` when a skill analysis exceeds 20,000 bytes. `check-html PLAN --skill PATH` or `--repository` verifies that an HTML version contains no scripts, event handlers or external resources. `discussion PLAN --number N` fetches an issue or pull request with its comments, reviews and changed files in one call. HTML versions are not part of the completion record.
+The agent drives `node skills/skill-anatomy/dist/cli.js` (`--help` lists the commands). `prepare URL` pins the commit, expands its files into `.cache/sources/<owner>/<repo>/<commit>/` with an index of paths, byte counts and line counts, fetches the issue index, and returns the PLAN; `prepare URL --workspace PATH` overrides the output location for one run. `approve PLAN` records your OK. `status PLAN` shows each skill's `pending` / `done` state, the repository state, and each HTML version's presence and check result. `complete PLAN --skill PATH` or `--repository` records completion, generates the HTML version from the Markdown using the templates in `assets/templates/` (edit their `<style>` to change the look), and returns `report_bytes` with `warnings` when a skill analysis exceeds 20,000 bytes or the Markdown uses notation the HTML version cannot carry. `discussion PLAN --number N` fetches an issue or pull request with its comments, reviews and changed files in one call. HTML versions are not part of the completion record.
 
 `prepare`, `approve` and `complete` stop with a `.state.json.lock` error while another process updates the same repository state. If a lock remains after an abnormal exit, read the lock file named in the error, check its `hostname`, `pid` and `created_at`, make sure no process on any machine sharing the output location is still running, then rename the lock to an unused name and run the command again. There is no automatic recovery. Do not research the same repository concurrently in the same output location.
 

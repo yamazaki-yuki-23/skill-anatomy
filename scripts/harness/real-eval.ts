@@ -29,7 +29,6 @@ export interface Profile {
   repo: string;
   commit: string;
   url: string;
-  format?: 'html';
   timeoutMs: number;
 }
 export const profiles: Record<string, Profile> = {
@@ -38,7 +37,6 @@ export const profiles: Record<string, Profile> = {
     repo: 'total-recall',
     commit: '437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f',
     url: 'https://github.com/gavdalf/total-recall/tree/437ab3656ecdf52c7ed0c3ee63a3cdae68d5b90f',
-    format: 'html',
     timeoutMs: 1_500_000,
   },
   multi: {
@@ -54,7 +52,6 @@ const trustedFiles = [
   'references/research.md',
   'references/report-format.md',
   'references/writing.md',
-  'references/html-report.md',
   'assets/templates/skill-analysis.md',
   'assets/templates/repository-analysis.md',
   'assets/templates/skill-analysis.html',
@@ -104,7 +101,7 @@ const gitFlagPrefixes = [
   '-G',
   '-U',
 ];
-const cliOperations = ['status', 'approve', 'complete', 'check-html', 'discussion'];
+const cliOperations = ['status', 'approve', 'complete', 'discussion'];
 
 // Allow rules decide what a tool call may do; execution happens separately so the rules are testable.
 export interface RuleContext {
@@ -124,6 +121,11 @@ export interface RuleContext {
 }
 export type Action =
   | { kind: 'deny'; reason: string }
+  | {
+      kind: 'search';
+      program: 'rg' | 'grep' | 'sed' | 'head' | 'tail' | 'cat' | 'wc';
+      args: string[];
+    }
   | { kind: 'error'; message: string }
   | { kind: 'path_info'; path: string }
   | { kind: 'read'; path: string }
@@ -177,14 +179,18 @@ function decideGit(vector: string[], context: RuleContext): Action {
       continue;
     }
     if (context.knownPath(value)) continue;
-    const match = /^([a-f0-9]{7,40})(\^+|~\d+)?(?:\.\.([a-f0-9]{7,40}))?(?::(.*))?$/.exec(value);
+    // Parent and ancestor suffixes (^, ^1, ~2) stay inside the pinned history.
+    const match =
+      /^([a-f0-9]{7,40})(?:\^\d*|~\d+)*(?:\.\.([a-f0-9]{7,40})(?:\^\d*|~\d+)*)?(?::(.*))?$/.exec(
+        value,
+      );
     if (!match) return { kind: 'deny', reason: `Unknown fixed source object/path: ${value}` };
     revisions++;
-    const endpoints = [match[1]!, ...(match[3] === undefined ? [] : [match[3]])];
+    const endpoints = [match[1]!, ...(match[2] === undefined ? [] : [match[2]])];
     const full = context.resolveCommit(match[1]!);
     if (!full || endpoints.some((endpoint) => !context.resolveCommit(endpoint)))
       return { kind: 'deny', reason: 'Commit outside pinned history' };
-    const inner = match[4];
+    const inner = match[3];
     if (
       inner !== undefined &&
       inner !== '' &&
@@ -248,10 +254,180 @@ function decideGh(vector: string[], context: RuleContext): Action {
     };
   return { kind: 'deny', reason: 'Unapproved gh command' };
 }
+// Agents search the expanded source tree the way their own search tools do; the
+// harness mirrors that with read-only rg/grep confined to /cache/source.
+const searchFlags = new Set([
+  '-n',
+  '-i',
+  '-l',
+  '-c',
+  '-r',
+  '-R',
+  '-F',
+  '-w',
+  '-E',
+  '-S',
+  '-s',
+  '-H',
+  '-h',
+  '--no-heading',
+  '--line-number',
+  '--ignore-case',
+  '--files-with-matches',
+  '--count',
+  '--fixed-strings',
+  '--word-regexp',
+  '--no-messages',
+  '--with-filename',
+  '--no-filename',
+  '--color=never',
+  '--hidden',
+  '--no-ignore',
+  '--files',
+  '-o',
+  '--only-matching',
+  '--sort=path',
+]);
+const searchValueFlags = new Set([
+  '-e',
+  '-g',
+  '--glob',
+  '-t',
+  '--type',
+  '-m',
+  '--max-count',
+  '-A',
+  '-B',
+  '-C',
+  '--max-columns',
+]);
+function decideSearch(program: 'rg' | 'grep', vector: string[], context: RuleContext): Action {
+  const root = context.sourceRoot();
+  if (!root) return { kind: 'deny', reason: 'Expanded source is unavailable' };
+  // Options are recognised anywhere before "--"; the command is rebuilt as
+  // "options -- pattern paths" so the tool never reads a path or pattern as an option.
+  const options: string[] = [];
+  let pattern: string | undefined;
+  let explicitPattern = false;
+  const paths: string[] = [];
+  for (let i = 0; i < vector.length; i++) {
+    const value = vector[i]!;
+    if (value === '--') {
+      // After the terminator the first argument is the pattern when none was given
+      // (rg -- -foo is rg -e -foo); the rest are paths.
+      const remaining = vector.slice(i + 1);
+      if (pattern === undefined && !options.includes('--files') && remaining.length)
+        pattern = remaining.shift()!;
+      for (const rest of remaining) paths.push(rest);
+      break;
+    }
+    if (value === '-e') {
+      const next = vector[i + 1];
+      if (next === undefined) return { kind: 'deny', reason: 'Missing pattern' };
+      options.push('-e', next);
+      pattern = next;
+      explicitPattern = true;
+      i++;
+      continue;
+    }
+    if (value.startsWith('-')) {
+      if (
+        searchFlags.has(value) ||
+        /^-[ABCm]\d+$/.test(value) ||
+        /^-[nilcrRFwESsHho]{2,}$/.test(value)
+      ) {
+        options.push(value);
+        continue;
+      }
+      if (searchValueFlags.has(value)) {
+        const next = vector[i + 1];
+        if (next === undefined || /[\0]/.test(next))
+          return { kind: 'deny', reason: `Missing value for ${value}` };
+        options.push(value, next);
+        i++;
+        continue;
+      }
+      return { kind: 'deny', reason: `Unsupported search option: ${value}` };
+    }
+    if (pattern === undefined && !options.includes('--files')) {
+      pattern = value;
+      continue;
+    }
+    paths.push(value);
+  }
+  const out = [...options, ...(pattern !== undefined && !explicitPattern ? ['--', pattern] : [])];
+  if (pattern === undefined && !options.includes('--files'))
+    return { kind: 'deny', reason: 'Missing pattern' };
+  const resolved: string[] = [];
+  for (const value of paths.length ? paths : ['/cache/source']) {
+    const relative =
+      value === '/cache/source'
+        ? '.'
+        : value.startsWith('/cache/source/')
+          ? value.slice('/cache/source/'.length)
+          : undefined;
+    if (relative === undefined || relative.includes('..') || path.isAbsolute(relative))
+      return { kind: 'deny', reason: `Search outside the expanded source: ${value}` };
+    if (relative !== '.' && !context.knownPath(relative))
+      return { kind: 'deny', reason: `Unknown source path: ${value}` };
+    resolved.push(relative === '.' ? root : path.join(root, relative));
+  }
+  return { kind: 'search', program, args: [...out, ...resolved] };
+}
+// Range and whole-file reads of expanded source files, as an agent's read tool offers.
+function decideView(
+  program: 'sed' | 'head' | 'tail' | 'cat' | 'wc',
+  vector: string[],
+  context: RuleContext,
+): Action {
+  const root = context.sourceRoot();
+  if (!root) return { kind: 'deny', reason: 'Expanded source is unavailable' };
+  const out: string[] = [];
+  const paths: string[] = [];
+  let i = 0;
+  if (program === 'sed') {
+    if (vector[0] !== '-n' || !/^\d+(,\d+)?p$/.test(vector[1] ?? ''))
+      return { kind: 'deny', reason: 'Only sed -n RANGEp FILE is supported' };
+    out.push('-n', vector[1]!);
+    i = 2;
+  }
+  for (; i < vector.length; i++) {
+    const value = vector[i]!;
+    if (value.startsWith('-')) {
+      if ((program === 'head' || program === 'tail') && /^-\d+$/.test(value)) out.push(value);
+      else if (
+        (program === 'head' || program === 'tail') &&
+        value === '-n' &&
+        /^[+-]?\d+$/.test(vector[i + 1] ?? '')
+      ) {
+        out.push('-n', vector[++i]!);
+      } else if (program === 'wc' && /^-[lwc]+$/.test(value)) out.push(value);
+      else return { kind: 'deny', reason: `Unsupported ${program} option: ${value}` };
+      continue;
+    }
+    paths.push(value);
+  }
+  if (!paths.length) return { kind: 'deny', reason: 'Missing source file' };
+  const resolved: string[] = [];
+  for (const value of paths) {
+    const relative = value.startsWith('/cache/source/')
+      ? value.slice('/cache/source/'.length)
+      : undefined;
+    if (relative === undefined || relative.includes('..') || !context.knownPath(relative))
+      return { kind: 'deny', reason: `Read outside the expanded source: ${value}` };
+    resolved.push(path.join(root, relative));
+  }
+  return { kind: 'search', program, args: [...out, ...resolved] };
+}
+// The HTML siblings that complete generates may be inspected and read, never written.
+function viewablePaths(context: RuleContext): string[] {
+  const reports = context.reportPaths();
+  return [...reports, ...reports.map((report) => `${report.slice(0, -3)}.html`)];
+}
 export function decide(name: string, args: Record<string, unknown>, context: RuleContext): Action {
   if (name === 'path_info') {
     const actual = typeof args.path === 'string' ? devirtualize(context, args.path) : '';
-    if (!context.reportPaths().includes(actual))
+    if (!viewablePaths(context).includes(actual))
       return { kind: 'deny', reason: 'Inspect outside approved reports' };
     return { kind: 'path_info', path: actual };
   }
@@ -278,7 +454,7 @@ export function decide(name: string, args: Record<string, unknown>, context: Rul
       };
     }
     const actual = devirtualize(context, filename);
-    if (context.reportPaths().includes(actual)) return { kind: 'read', path: actual };
+    if (viewablePaths(context).includes(actual)) return { kind: 'read', path: actual };
     const sourceRoot = context.sourceRoot();
     const relative = sourceRoot === undefined ? undefined : path.relative(sourceRoot, actual);
     if (
@@ -316,6 +492,16 @@ export function decide(name: string, args: Record<string, unknown>, context: Rul
     }
     if (args.program === 'git') return decideGit(vector, context);
     if (args.program === 'gh') return decideGh(vector, context);
+    if (args.program === 'rg' || args.program === 'grep')
+      return decideSearch(args.program, vector, context);
+    if (
+      args.program === 'sed' ||
+      args.program === 'head' ||
+      args.program === 'tail' ||
+      args.program === 'cat' ||
+      args.program === 'wc'
+    )
+      return decideView(args.program, vector, context);
     return { kind: 'deny', reason: 'Program outside approved fixed-source research' };
   }
   if (name === 'fetch_url')
@@ -393,16 +579,10 @@ function serveProfile(output: string): void {
         (entry): entry is Record<string, unknown> => isRecord(entry) && entry.selected === true,
       );
       const destination = String(current.destination);
-      const paths = [
+      return [
         ...selected.map((entry) => String(entry.report)),
         path.join(destination, 'repository-analysis.md'),
       ];
-      if (current.format === 'html')
-        paths.push(
-          ...selected.map((entry) => String(entry.html)),
-          path.join(destination, 'repository-analysis.html'),
-        );
-      return paths;
     },
     githubIndex: () => String(plan().github_index),
     sourceRoot: () => {
@@ -499,6 +679,22 @@ function serveProfile(output: string): void {
         } catch (error) {
           return { error: errorMessage(error).slice(0, 1000) };
         }
+      case 'search': {
+        const result = spawnSync(action.program, action.args, {
+          encoding: 'utf8',
+          timeout: 60_000,
+          maxBuffer: 16 * 1024 * 1024,
+          cwd: context.sourceRoot(),
+        });
+        if (result.error) return { error: errorMessage(result.error).slice(0, 500) };
+        // Exit code 1 means no match for both tools; anything else is an error.
+        if (result.status !== 0 && result.status !== 1)
+          return { error: (result.stderr || `exit ${result.status}`).slice(0, 1000) };
+        return virtualize(
+          context,
+          result.stdout.replaceAll(context.sourceRoot()!, '/cache/source'),
+        );
+      }
     }
   };
   ResearchFixture.prototype.dispatch = function (name, args) {
@@ -531,17 +727,14 @@ function serveProfile(output: string): void {
       : null;
     return {
       case: profileName,
-      payload_read: false,
+      payload_read: false as boolean,
       tool_calls: this.trace.length,
       violations: this.trace.filter((entry) => entry.violation),
       reports_saved: context
         .reportPaths()
         .every((file) => existsSync(file) && readFileSync(file, 'utf8').trim().length > 0),
       completed: repository?.status === 'done',
-      html_reports_valid:
-        current?.format === 'html' && htmlStatuses
-          ? htmlStatuses.every((status) => status === 'valid')
-          : null,
+      html_reports_valid: htmlStatuses ? htmlStatuses.every((status) => status === 'valid') : false,
       html_valid: htmlStatuses,
       done: current?.done,
       total: current?.total,
@@ -581,7 +774,6 @@ async function evaluate(profileName: string): Promise<void> {
       url: profile.url,
       workspace,
       noConfirm: true,
-      ...(profile.format ? { format: profile.format } : {}),
     },
     target,
     workspace,
@@ -601,7 +793,6 @@ async function evaluate(profileName: string): Promise<void> {
     index_items: index.items.length,
     plan_file: prepared.plan_file,
     workspace,
-    format: profile.format ?? 'markdown',
     attempts: 1,
     timeout_ms: profile.timeoutMs,
     model: 'Codex CLI default (unfixed; see events.jsonl)',
@@ -643,7 +834,7 @@ async function evaluate(profileName: string): Promise<void> {
   ];
   for (const [key, value] of Object.entries(config))
     args.push('-c', `${key}=${JSON.stringify(value)}`);
-  const prompt = `Use the skill installed at /tool/SKILL.md to analyze ${profile.url}. Prepare and scope approval are already complete; continue from /plan.json and complete the Japanese analysis using the research tools (read_file, write_file, run_command, path_info). The source files are readable at /cache/source/<path> and through read-only git on /cache/repo.git; GitHub issues and pull requests of this repository are readable with "gh api". The normal output paths were approved. No other reports exist.${profile.format === 'html' ? '\n利用者の指定: HTML版でも出力してください。PLANの format は html です。' : ''}`;
+  const prompt = `Use the skill installed at /tool/SKILL.md to analyze ${profile.url}. Prepare and scope approval are already complete; continue from /plan.json and complete the Japanese analysis using the research tools (read_file, write_file, run_command, path_info). The source files are readable at /cache/source/<path> and through read-only git on /cache/repo.git; GitHub issues and pull requests of this repository are readable with "gh api". The normal output paths were approved. No other reports exist.`;
   writeFileSync(path.join(output, 'prompt.txt'), prompt);
   console.log(`Real-model evaluation ${profileName}: ${output}`);
   const child = spawn('codex', args, { stdio: ['pipe', 'pipe', 'pipe'] });

@@ -99,7 +99,6 @@ function prepareSnapshotUnlocked(options, target, root, cache, defaultRef, index
     source_index: source.index,
     approved: !!options.noConfirm,
     confirmation: options.noConfirm ? "skipped-by-user" : "required",
-    format: options.format ?? "markdown",
     files,
     skills: entries
   };
@@ -120,7 +119,6 @@ function prepareSnapshotUnlocked(options, target, root, cache, defaultRef, index
     selected_skills: selected.length,
     pending: entries.filter((e) => e.selected && e.status === "pending").map((e) => e.skill),
     approved: plan.approved,
-    format: plan.format,
     index_status: index.status,
     source: source.directory,
     source_index: source.index,

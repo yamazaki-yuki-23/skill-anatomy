@@ -1,7 +1,3 @@
-export const REPORT_FORMATS = ["markdown", "html"];
-export function isReportFormat(value) {
-  return typeof value === "string" && REPORT_FORMATS.includes(value);
-}
 export function htmlPath(report) {
   return report.endsWith(".md") ? `${report.slice(0, -3)}.html` : `${report}.html`;
 }

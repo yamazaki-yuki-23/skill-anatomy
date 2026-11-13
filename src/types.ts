@@ -4,12 +4,10 @@ export interface Target {
   repo: string;
   tail: string[];
 }
-export type ReportFormat = 'markdown' | 'html';
 export interface PrepareOptions {
   url: string;
   workspace: string;
   noConfirm?: boolean;
-  format?: ReportFormat;
 }
 export interface SourceIndexEntry {
   path: string;
@@ -67,7 +65,6 @@ export interface HtmlProgress {
   status: HtmlStatus;
 }
 export interface Progress {
-  format: ReportFormat;
   skills: { skill: string; report: string; status: 'pending' | 'done'; html: HtmlProgress }[];
   repository: { report: string; status: 'pending' | 'done'; html: HtmlProgress };
   done: number;
@@ -92,7 +89,6 @@ export interface Plan {
   'source_index': string;
   approved: boolean;
   confirmation: string;
-  format?: ReportFormat;
   files: Files;
   skills: Entry[];
 }
