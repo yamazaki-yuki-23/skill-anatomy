@@ -24,7 +24,7 @@ export function validateSkill(root: string): Finding[] {
     if (typeof data?.description !== 'string' || !data.description.trim())
       report(skillFile, 'Description is required');
     if (data?.license !== 'MIT') report(skillFile, 'License must agree with the repository');
-    if (data?.['argument-hint'] !== '<GitHub URL> [--no-confirm] [--format html]')
+    if (data?.['argument-hint'] !== '<GitHub URL> [--no-confirm]')
       report(skillFile, 'Argument hint must describe the URL and supported invocation flags');
     if (data?.metadata && typeof data.metadata === 'object') {
       for (const key of Object.keys(data.metadata)) {
@@ -52,7 +52,6 @@ export function validateSkill(root: string): Finding[] {
     'references/writing.md',
     'assets/templates/skill-analysis.md',
     'assets/templates/repository-analysis.md',
-    'references/html-report.md',
     'assets/templates/skill-analysis.html',
     'assets/templates/repository-analysis.html',
     'agents/openai.yaml',

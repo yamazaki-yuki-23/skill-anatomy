@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>{{所有者}}/{{リポジトリ名}} の全体分析</title>
+<title>{{title}}</title>
 <style>
 :root {
   color-scheme: light dark;
@@ -212,80 +212,27 @@ footer { margin-top: 2rem; color: var(--muted); font-size: 0.86rem; text-align: 
 <div class="page">
 <header class="hero">
   <p class="eyebrow">Skill anatomy</p>
-  <h1>{{所有者}}/{{リポジトリ名}} の全体分析</h1>
-  <p class="lead">{{対象の目的を1文で示す。Markdown版の概要章の冒頭の文と同じ内容にする}}</p>
+  <h1>{{title}}</h1>
+  <p class="lead">{{lead}}</p>
   <dl class="facts">
-    <div><dt>元URL</dt><dd><a href="{{リポジトリへのリンク}}">{{所有者/リポジトリ名}}</a></dd></div>
-    <div><dt>分析コミット</dt><dd><code>{{今回の固定コミットの先頭12桁}}</code></dd></div>
-    <div><dt>調査日</dt><dd>{{YYYY-MM-DD}}</dd></div>
-    <div><dt>分析状況</dt><dd>完了 {{件数}} / 未完了 {{件数}}</dd></div>
+    <div><dt>元URL</dt><dd><a href="{{url}}">{{url_label}}</a></dd></div>
+    <div><dt>分析コミット</dt><dd><code>{{commit}}</code></dd></div>
+    <div><dt>調査日</dt><dd>{{date}}</dd></div>
+    <div><dt>分析状況</dt><dd>{{progress}}</dd></div>
   </dl>
 </header>
 <div class="layout">
 <nav class="toc" aria-label="目次">
   <p class="toc-title">目次</p>
   <ol>
-    <li><a href="#overview">概要</a></li>
-    <li><a href="#skills">スキル一覧</a></li>
-    <li><a href="#relations">スキル同士の関係</a></li>
-    <li><a href="#learning">共通する設計</a></li>
-    <li><a href="#sources">調査範囲と出典</a></li>
+{{toc}}
   </ol>
 </nav>
 <main>
-<section id="overview">
-  <h2>概要</h2>
-  {{Markdown版の同じ章の本文。分析状況と対象範囲の文も含める。### の小見出しがある章は<h3 id="overview-1">のようにidを付け、目次に入れ子で載せる}}
-</section>
-<section id="skills">
-  <h2>スキル一覧</h2>
-  <div class="table-wrap">
-  <table>
-    <thead><tr><th>スキル</th><th>元のパス</th><th>役割</th><th>分析状況</th><th>個別分析</th></tr></thead>
-    <tbody>
-      <tr><td>{{名前}}</td><td><code>{{パス}}</code></td><td>{{短い説明}}</td><td><span class="status done">{{完了・未完了・対象外。classは順に done・pending・skipped}}</span></td><td>{{Markdown版と同じ.mdへの相対リンク。隣に.htmlがあれば <a class="alt" href="同名.html">HTML版</a> を続けて置く。未作成なら「未作成」}}</td></tr>
-    </tbody>
-  </table>
-  </div>
-</section>
-<section id="relations">
-  <h2>スキル同士の関係</h2>
-  {{Markdown版の同じ章の本文。単一対象は個別分析へのリンクだけを置く}}
-</section>
-<section id="learning">
-  <h2>共通する設計</h2>
-  {{Markdown版の同じ章の本文。途中は「未集約」のまま写す}}
-</section>
-<section id="sources">
-  <h2>調査範囲と出典</h2>
-  <div class="table-wrap">
-  <table>
-    <thead><tr><th>項目</th><th>内容</th></tr></thead>
-    <tbody>
-      <tr><th>元URL</th><td><a href="{{リポジトリへのリンク}}">{{リポジトリへのリンク}}</a></td></tr>
-      <tr><th>分析コミット</th><td><code>{{今回の固定コミット}}</code></td></tr>
-      <tr><th>調査日</th><td>{{YYYY-MM-DD}}</td></tr>
-      <tr><th>実行検証</th><td>なし</td></tr>
-    </tbody>
-  </table>
-  </div>
-  <details class="report-details">
-    <summary>詳しい調査記録を見る</summary>
-    <div class="table-wrap">
-    <table>
-      <thead><tr><th>項目</th><th>内容</th></tr></thead>
-      <tbody>
-        <tr><th>調査範囲</th><td>{{読んだファイル・履歴・PR・Issue}}</td></tr>
-        <tr><th>未確認の範囲</th><td>{{取得できなかった情報と調べていない範囲}}</td></tr>
-      </tbody>
-    </table>
-    </div>
-    {{Markdown版の調査記録にある補足の段落と、本文と表で示していない出典リンク（<ul class="sources-list">）。調査日・コミットを保つ過去レポートがあれば、その旨とリンクを記す}}
-  </details>
-</section>
+{{sections}}
 </main>
 </div>
-<footer>Skill anatomy が生成した全体分析のHTML版。本文は同じフォルダのMarkdown版と同じ内容で、完了記録はMarkdown版が持つ。</footer>
+<footer>Skill anatomy が生成した全体分析のHTML版。本文は同じフォルダのMarkdown版から補助CLIが生成したもので、完了記録はMarkdown版が持つ。</footer>
 </div>
 </body>
 </html>

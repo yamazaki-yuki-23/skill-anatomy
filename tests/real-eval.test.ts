@@ -240,3 +240,108 @@ test('allow rules deny other hosts, unapproved endpoints, outside files, and exe
   );
   assert.equal(decide('fetch_url', { url: 'https://example.com' }, context).kind, 'error');
 });
+
+test('read-only search and range reads are confined to the expanded source tree', () => {
+  const root = context.sourceRoot()!;
+  assert.deepEqual(command('rg', 'needle', '-n', '/cache/source/SKILL.md', '-i'), {
+    kind: 'search',
+    program: 'rg',
+    args: ['-n', '-i', '--', 'needle', `${root}/SKILL.md`],
+  });
+  assert.deepEqual(command('rg', '-n', '--', '-needle', '/cache/source/SKILL.md'), {
+    kind: 'search',
+    program: 'rg',
+    args: ['-n', '--', '-needle', `${root}/SKILL.md`],
+  });
+  assert.equal(command('rg', '-n', '--').kind, 'deny');
+  assert.deepEqual(command('rg', '-n', 'validate|hook', '/cache/source/references/guide.md'), {
+    kind: 'search',
+    program: 'rg',
+    args: ['-n', '--', 'validate|hook', `${root}/references/guide.md`],
+  });
+  assert.deepEqual(command('grep', '-rn', '-e', '-dash', '/cache/source'), {
+    kind: 'search',
+    program: 'grep',
+    args: ['-rn', '-e', '-dash', root],
+  });
+  assert.deepEqual(command('rg', '--files', '/cache/source/references'), {
+    kind: 'search',
+    program: 'rg',
+    args: ['--files', `${root}/references`],
+  });
+  assert.deepEqual(command('sed', '-n', '300,520p', '/cache/source/SKILL.md'), {
+    kind: 'search',
+    program: 'sed',
+    args: ['-n', '300,520p', `${root}/SKILL.md`],
+  });
+  assert.deepEqual(command('head', '-n', '40', '/cache/source/SKILL.md'), {
+    kind: 'search',
+    program: 'head',
+    args: ['-n', '40', `${root}/SKILL.md`],
+  });
+  assert.deepEqual(command('wc', '-l', '/cache/source/SKILL.md'), {
+    kind: 'search',
+    program: 'wc',
+    args: ['-l', `${root}/SKILL.md`],
+  });
+  for (const [program, ...args] of [
+    ['rg', '--pre', 'cat', 'x', '/cache/source'],
+    ['rg', '-n', 'x', '/ws/reports'],
+    ['rg', '-n', 'x', '/cache/source/../../.env'],
+    ['rg', '-n', 'x', '/cache/source/missing.md'],
+    ['grep', '-rn', 'x', '/etc'],
+    ['sed', '-i', 's/a/b/', '/cache/source/SKILL.md'],
+    ['sed', '-n', '1,5p', '/cache/repo.git/HEAD'],
+    ['sed', '-n', 'e touch x', '/cache/source/SKILL.md'],
+    ['head', '-c', '10', '/cache/source/SKILL.md'],
+    ['cat', '/ws/.env'],
+    ['wc', '-l'],
+    ['python3', '-c', 'print(1)'],
+    ['node', '-e', '1'],
+  ] as string[][]) {
+    assert.equal(command(program!, ...args).kind, 'deny', [program, ...args].join(' '));
+  }
+});
+
+test('generated HTML siblings can be inspected and read but not written', () => {
+  const html = '/ws/reports/fixture-owner/review-skills/skill-analyses/review-brief.html';
+  assert.deepEqual(decide('path_info', { path: html }, context), { kind: 'path_info', path: html });
+  assert.deepEqual(decide('read_file', { path: html }, context), { kind: 'read', path: html });
+  assert.equal(
+    decide('write_file', { path: html, content: '<!doctype html>' }, context).kind,
+    'deny',
+  );
+  assert.equal(decide('path_info', { path: '/ws/reports/other.html' }, context).kind, 'deny');
+});
+
+test('parent and ancestor suffixes on pinned commits are read-only history access', () => {
+  const short = commit.slice(0, 12);
+  assert.deepEqual(
+    command('git', '--git-dir', '/cache/repo.git', 'diff', `${short}^1`, short, '--', 'SKILL.md'),
+    {
+      kind: 'git',
+      args: [
+        '--literal-pathspecs',
+        'diff',
+        '--no-ext-diff',
+        '--no-textconv',
+        `${short}^1`,
+        short,
+        '--',
+        'SKILL.md',
+      ],
+    },
+  );
+  assert.equal(
+    command('git', '--git-dir', '/cache/repo.git', 'show', `${short}~2:SKILL.md`).kind,
+    'git',
+  );
+  assert.equal(
+    command('git', '--git-dir', '/cache/repo.git', 'log', `${short}^1..${short}`).kind,
+    'git',
+  );
+  assert.equal(
+    command('git', '--git-dir', '/cache/repo.git', 'show', 'bbbbbbbbbbbb^1').kind,
+    'deny',
+  );
+});

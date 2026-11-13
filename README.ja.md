@@ -26,7 +26,7 @@ Node.js 22以上とGitが必要です。PR・Issueも調べる場合は、GitHub
 
 3. 提示された調査範囲と保存先を確認し、「OK」と返します。スキルごとのレポートが順に保存され、最後にリポジトリ全体のレポートが、提示された保存先の `reports/` に作られます（既定は分析を実行したフォルダ。[保存されるファイル](#保存されるファイル)を参照）。
 
-調査範囲はURLで決まります。リポジトリ全体、1つのスキル、複数のスキルを含むフォルダ、`SKILL.md` ファイルのどれでも指定できます。ブラウザで読みたいときは「HTMLでも出力して」と添えると、Markdownの各レポートの隣に同じ内容の `.html` が保存されます。更新は `npx skills update skill-anatomy` または `gh skill update skill-anatomy` で行います。
+調査範囲はURLで決まります。リポジトリ全体、1つのスキル、複数のスキルを含むフォルダ、`SKILL.md` ファイルのどれでも指定できます。Markdownの各レポートの隣に、ブラウザで読める同じ内容の `.html` も保存されます。更新は `npx skills update skill-anatomy` または `gh skill update skill-anatomy` で行います。
 
 ## レポートで分かること
 
@@ -43,9 +43,9 @@ URLと一緒に「SKILL.mdと参照資料の役割分担を説明して」のよ
 ```text
 reports/<owner>/<repository>/
 ├── repository-analysis.md      # リポジトリ全体のレポート
-├── repository-analysis.html    # そのHTML版（指定時）
+├── repository-analysis.html    # そのHTML版
 ├── skill-analyses/<path>.md     # スキルごとのレポート
-├── skill-analyses/<path>.html   # そのHTML版（指定時）
+├── skill-analyses/<path>.html   # そのHTML版
 └── .state.json                 # 完了したレポートの記録
 ```
 
@@ -62,12 +62,11 @@ export SKILL_ANATOMY_WORKSPACE="$HOME/.local/share/skill-anatomy"
 | オプション | 動作 |
 |---|---|
 | `--no-confirm` | 今回の実行で調査方針の確認を省きます。ツールの権限確認は省けません。 |
-| `--format html` | Markdownの各レポートの隣に、同じ内容のHTML版も保存します。 |
 
 <details>
 <summary>CLIを直接使う、ロック、整理</summary>
 
-エージェントは `node skills/skill-anatomy/dist/cli.js` を使います（`--help` でコマンド一覧）。`prepare URL` はコミットを固定し、そのファイルを `.cache/sources/<owner>/<repo>/<commit>/` に展開してパス・バイト数・行数の索引を書き、Issueの索引を取得してPLANを返します。`prepare URL --workspace PATH` は今回の保存先を上書きします。`approve PLAN` はOKを記録します。`status PLAN` は各スキルの `pending` / `done`、全体分析の状態、HTML版の有無と検査結果を示します。`complete PLAN --skill PATH` または `--repository` は完了を記録して `report_bytes` を返し、個別分析が20,000バイトを超えると `warnings` を付けます。`check-html PLAN --skill PATH` または `--repository` は、HTML版にスクリプト・イベント属性・外部リソースがないことを検査します。`discussion PLAN --number N` は、Issue・PRの本文、コメント、レビュー、変更ファイルを1回で取得します。HTML版は完了記録に含めません。
+エージェントは `node skills/skill-anatomy/dist/cli.js` を使います（`--help` でコマンド一覧）。`prepare URL` はコミットを固定し、そのファイルを `.cache/sources/<owner>/<repo>/<commit>/` に展開してパス・バイト数・行数の索引を書き、Issueの索引を取得してPLANを返します。`prepare URL --workspace PATH` は今回の保存先を上書きします。`approve PLAN` はOKを記録します。`status PLAN` は各スキルの `pending` / `done`、全体分析の状態、HTML版の有無と検査結果を示します。`complete PLAN --skill PATH` または `--repository` は完了を記録し、`assets/templates/` のテンプレート（見た目を変えるには `<style>` を編集）を使ってMarkdownからHTML版を生成し、`report_bytes` を返します。個別分析が20,000バイトを超えるか、HTML版で扱えない記法があると `warnings` を付けます。`discussion PLAN --number N` は、Issue・PRの本文、コメント、レビュー、変更ファイルを1回で取得します。HTML版は完了記録に含めません。
 
 `prepare`・`approve`・`complete` は、同じリポジトリの状態を別プロセスが更新中なら `.state.json.lock` のエラーで止まります。異常終了でロックが残ったら、エラーが示すロックファイルの `hostname`・`pid`・`created_at` を確認し、保存先を共有するどのマシンでも実行中でないことを確かめてから、未使用の名前に変更して再実行します。自動回復はありません。同じ保存先で同じリポジトリを並行して調べないでください。
 

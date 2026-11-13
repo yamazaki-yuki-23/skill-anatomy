@@ -16,7 +16,6 @@ import {
   report,
   url,
 } from '../scripts/security-fixture.ts';
-import { isRecord } from '../scripts/json.ts';
 
 test('a normal research flow can read sources, save reports, and complete', () => {
   const f = new ResearchFixture(required(cases[0]));
@@ -232,9 +231,11 @@ test('progress reads and re-prepare reflect completion while the original plan s
   const run = (...args: string[]) =>
     f.call('run_command', { program: 'node', args: ['/tool/dist/cli.js', ...args] });
   const initialPlan = read('/plan.json');
-  const html = (file: string) => ({ report: `${file.slice(0, -3)}.html`, status: 'missing' });
+  const html = (file: string, status = 'missing') => ({
+    report: `${file.slice(0, -3)}.html`,
+    status,
+  });
   assert.deepEqual(run('status', '/plan.json'), {
-    format: 'markdown',
     skills: [
       { skill: 'skills/review-brief/SKILL.md', report, status: 'pending', html: html(report) },
     ],
@@ -255,6 +256,7 @@ test('progress reads and re-prepare reflect completion while the original plan s
   f.call('write_file', { path: report, content: '# Individual analysis\n' });
   assert.deepEqual(run('complete', '/plan.json', '--skill', skill), {
     saved: report,
+    html: htmlReport,
     done: 1,
     total: 1,
   });
@@ -263,8 +265,7 @@ test('progress reads and re-prepare reflect completion while the original plan s
     skills: { [skill]: { status: 'done', report: 'skill-analyses/review-brief.md' } },
   };
   assert.deepEqual(run('status', '/plan.json'), {
-    format: 'markdown',
-    skills: [{ skill, report, status: 'done', html: html(report) }],
+    skills: [{ skill, report, status: 'done', html: html(report, 'valid') }],
     repository: { report: overview, status: 'pending', html: html(overview) },
     done: 1,
     total: 1,
@@ -279,6 +280,7 @@ test('progress reads and re-prepare reflect completion while the original plan s
   f.call('write_file', { path: overview, content: '# Repository analysis\n' });
   assert.deepEqual(run('complete', '/plan.json', '--repository'), {
     saved: overview,
+    html: htmlOverview,
     done: 1,
     total: 1,
   });
@@ -288,9 +290,8 @@ test('progress reads and re-prepare reflect completion while the original plan s
   });
   const repositoryResume = run('prepare', url);
   assert.deepEqual(run('status', '/plan.json'), {
-    format: 'markdown',
-    skills: [{ skill, report, status: 'done', html: html(report) }],
-    repository: { report: overview, status: 'done', html: html(overview) },
+    skills: [{ skill, report, status: 'done', html: html(report, 'valid') }],
+    repository: { report: overview, status: 'done', html: html(overview, 'valid') },
     done: 1,
     total: 1,
   });
@@ -300,9 +301,8 @@ test('progress reads and re-prepare reflect completion while the original plan s
   assert.deepEqual(repositoryResume.pending, []);
   f.call('write_file', { path: overview, content: '# Changed repository analysis\n' });
   assert.deepEqual(run('status', '/plan.json'), {
-    format: 'markdown',
-    skills: [{ skill, report, status: 'done', html: html(report) }],
-    repository: { report: overview, status: 'pending', html: html(overview) },
+    skills: [{ skill, report, status: 'done', html: html(report, 'valid') }],
+    repository: { report: overview, status: 'pending', html: html(overview, 'valid') },
     done: 1,
     total: 1,
   });
@@ -708,7 +708,7 @@ test('malformed non-null tool arguments retain legacy fixture reply trace and sc
     tool_calls: 16,
     violations: trace,
     reports_saved: false,
-    html_reports_valid: null,
+    html_reports_valid: false,
     completed: false,
     report_content_review: 'required',
   });
@@ -718,65 +718,4 @@ test('malformed non-null tool arguments retain legacy fixture reply trace and sc
     assert.deepEqual(actual.replies, legacy.replies);
     assert.deepEqual(actual.trace, legacy.trace);
   }
-});
-
-test('HTML versions are approved output only when the plan asked for them', () => {
-  const htmlCase = required(cases.find((scenario) => scenario.format === 'html'));
-  const plain = new ResearchFixture(required(cases[0]));
-  plain.call('write_file', { path: htmlReport, content: '<!doctype html>' });
-  assert.equal(plain.summary().violations.length, 1);
-  assert.equal(plain.summary().html_reports_valid, null);
-  const f = new ResearchFixture(htmlCase);
-  const run = (...args: string[]) =>
-    f.call('run_command', { program: 'node', args: ['/tool/dist/cli.js', ...args] });
-  assert.deepEqual(run('prepare', url, '--format', 'html'), {
-    ...JSON.parse(String(f.call('read_file', { path: '/plan.json' }))),
-    plan_file: '/plan.json',
-    pending: ['skills/review-brief/SKILL.md'],
-  });
-  assert.equal(f.summary().violations.length, 0);
-  for (const file of [report, overview])
-    f.call('write_file', { path: file, content: '# Source-based report\n' });
-  run('complete', '/plan.json', '--skill', 'skills/review-brief/SKILL.md');
-  run('complete', '/plan.json', '--repository');
-  const before = run('status', '/plan.json');
-  assert.ok(isRecord(before) && before.format === 'html');
-  assert.deepEqual(run('check-html', '/plan.json', '--skill', 'skills/review-brief/SKILL.md'), {
-    error: `HTML版を先に保存してください: ${htmlReport}`,
-  });
-  f.call('write_file', {
-    path: htmlReport,
-    content:
-      '<!doctype html><html><head><meta charset="utf-8"></head><body><script>x</script></body></html>',
-  });
-  const invalid = run('check-html', '/plan.json', '--skill', 'skills/review-brief/SKILL.md');
-  assert.ok(
-    isRecord(invalid) && typeof invalid.error === 'string' && /<script>/.test(invalid.error),
-  );
-  assert.equal(f.summary().html_reports_valid, false);
-  for (const file of [htmlReport, htmlOverview])
-    f.call('write_file', {
-      path: file,
-      content:
-        '<!doctype html><html><head><meta charset="utf-8"></head><body><p>本文</p></body></html>',
-    });
-  assert.deepEqual(run('check-html', '/plan.json', '--skill', 'skills/review-brief/SKILL.md'), {
-    checked: htmlReport,
-    valid: true,
-  });
-  assert.deepEqual(run('check-html', '/plan.json', '--repository'), {
-    checked: htmlOverview,
-    valid: true,
-  });
-  run('check-html', '/plan.json', '--skill', 'skills/other/SKILL.md');
-  assert.equal(f.summary().violations.length, 1);
-  const after = run('status', '/plan.json');
-  assert.ok(isRecord(after) && isRecord(after.repository) && isRecord(after.repository.html));
-  assert.equal(after.repository.html.status, 'valid');
-  assert.deepEqual(
-    { ...after, skills: undefined, repository: undefined },
-    { ...(before as object), skills: undefined, repository: undefined },
-  );
-  assert.equal(f.summary().html_reports_valid, true);
-  assert.equal(f.summary().completed, true);
 });
