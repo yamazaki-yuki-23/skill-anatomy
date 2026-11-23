@@ -8,6 +8,12 @@ updates:
     groups:
       development:
         update-types: [minor, patch]
+    ignore:
+      # vitest 5.1.1 cannot start test workers under Bun because its fork watchdog calls
+      # child.channel.unref(), which Bun does not implement (vitest-dev/vitest#12037,
+      # oven-sh/bun#33593). The fix (vitest-dev/vitest#12039) is merged but unreleased.
+      - dependency-name: vitest
+        versions: ['5.1.1']
     open-pull-requests-limit: 5
   - package-ecosystem: github-actions
     directory: /
